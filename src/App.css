@@ -5,10 +5,18 @@
   font-family: "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
     "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
 }
-.App {
-  display: grid;
-  justify-content: center;
-  background: linear-gradient(to bottom right, #17212b, #322f52);
-  min-height: 100vh;
-  color: #fff;
+
+.themeBtn {
+  border: none;
+  background: none;
+  font-size: 26px;
+  margin-top: 5px;
+}
+.dark {
+  background: #1c1c1cd7;
+  color: #fff !important;
+}
+.app {
+  background: #fff;
+  color: #000;
 }

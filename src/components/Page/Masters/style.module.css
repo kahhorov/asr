@@ -1,0 +1,98 @@
+.container {
+  width: 100%;
+  max-width: 1220px;
+  padding: 30px 20px;
+  margin: 0 auto;
+}
+.row {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 20px;
+}
+.inp {
+  width: 100%;
+  padding: 20px 10px;
+  border: none;
+  box-shadow: rgba(0, 0, 0, 0.16) 0px 10px 36px 0px,
+    rgba(0, 0, 0, 0.06) 0px 0px 0px 1px;
+  outline: none;
+  border-radius: 6px;
+}
+.accordionBtn {
+  background: none;
+  border: none;
+  box-shadow: rgba(0, 0, 0, 0.16) 0px 10px 36px 0px,
+    rgba(0, 0, 0, 0.06) 0px 0px 0px 1px;
+  padding: 20px;
+  border-radius: 7px;
+  width: 100%;
+}
+.mapList {
+  list-style-type: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.mapList li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(211, 211, 211, 0.847);
+}
+.inp:focus .accor {
+  background: none;
+  border: 1px solid red;
+}
+
+.userItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.icons {
+  display: flex;
+  gap: 10px;
+}
+
+.icon {
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+.iconD {
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.iconD:hover {
+  color: red;
+}
+.icon:hover {
+  color: #1976d2; /* hover rang */
+}
+
+.userName input {
+  padding: 10px 10px;
+  border-radius: 7px;
+  border: none;
+  box-shadow: rgba(0, 0, 0, 0.16) 0px 10px 36px 0px,
+    rgba(0, 0, 0, 0.06) 0px 0px 0px 1px;
+  margin: 20px 0;
+  margin-right: 10px;
+}
+.userName {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.sendIcon {
+  font-size: 30px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+.sendIcon:hover {
+  color: #1976d2;
+}

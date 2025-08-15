@@ -1,0 +1,81 @@
+.container {
+  width: 100%;
+  max-width: 1220px;
+  padding: 0 20px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+}
+.siteLogo {
+  cursor: pointer;
+}
+.Btn {
+  display: none !important;
+}
+.mobileNav {
+  width: 100%;
+  height: 100vh;
+  padding: 100px 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: #fdfdfd;
+  z-index: 1000000;
+}
+.navLink {
+  text-decoration: none;
+  color: #000;
+}
+.linkBtn {
+  background: none;
+  border: none;
+  width: 100%;
+  padding: 10px 20px;
+  text-align: start;
+  display: flex;
+  align-items: center;
+}
+.adminInfo {
+  bottom: 6%;
+  left: 5%;
+  font-size: 25px;
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #4e4e69;
+}
+.adminInfo span {
+  font-size: 20px;
+}
+
+@media screen and (max-width: 600px) {
+  .container {
+    width: 100%;
+    max-width: 100%;
+    padding: 0 0px;
+    margin: 0 0;
+    display: flex;
+    align-items: center;
+  }
+  .desktopNav {
+    display: none !important;
+  }
+  .Btn {
+    display: flex !important;
+  }
+  .Btn2 {
+    position: absolute !important;
+    top: 3% !important;
+    right: 5% !important;
+  }
+  .mobileLogo {
+    position: absolute;
+    top: 3%;
+    left: 20px;
+  }
+}
