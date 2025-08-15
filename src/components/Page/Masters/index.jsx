@@ -215,7 +215,7 @@ export default function App() {
       <Grid
         container
         spacing={2}
-        sx={{ display: "grid", gridTemplateColumns: "repeat(2,auto)" }}
+        sx={{ display: "grid", gridTemplateColumns: "repeat(1,auto)" }}
       >
         {accordions.map((acc) => (
           <Grid item xs={6} sm={12} key={acc.id}>
