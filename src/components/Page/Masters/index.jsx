@@ -221,12 +221,12 @@ export default function App() {
     }
 
     try {
-      await fetch("http://localhost:5000/sendMessage", {
+      await fetch("https://server-srsc.onrender.com/sendMessage", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          clientUser: chatId,
-          message: message,
+          clientUser: chatId, // acc.chatId ni yuborish kerak
+          message: message, // mahsulotlar va izohni yuborish
         }),
       });
       alert("Telegramga yuborildi!");
