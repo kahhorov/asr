@@ -264,7 +264,7 @@ export default function App() {
               </AccordionSummary>
               <AccordionDetails>
                 <TextField
-                  label="UserName yoki Chat ID"
+                  label="Username yoki Chat ID"
                   fullWidth
                   value={acc.chatId}
                   onChange={(e) => handleChatIdChange(acc.id, e.target.value)}
