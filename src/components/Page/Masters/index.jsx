@@ -61,37 +61,38 @@ function getAccordionsFromDB() {
   });
 }
 
-// BU YERGA O'Z BOT TOKENINGNI QO'Y
-const BOT_TOKEN = "8190649011:AAFwF5v7Se6E6hjiqhI9AgcGi5g7LiMMrUA";
+// Helper: birinchi N so'zni kesib olish
+const truncateWords = (text = "", wordCount = 2) => {
+  const words = text.trim().split(/\s+/);
+  if (words.length <= wordCount) return text;
+  return words.slice(0, wordCount).join(" ") + "...";
+};
 
 export default function App() {
   const [accordions, setAccordions] = useState([]);
-  const [loading, setLoading] = useState(true); // yuklanish holati
+  const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [newOwner, setNewOwner] = useState("");
   const [currentId, setCurrentId] = useState(null);
+  const [editIndex, setEditIndex] = useState(null);
 
   const [productName, setProductName] = useState("");
   const [productPrice, setProductPrice] = useState("");
-  const [editIndex, setEditIndex] = useState(null);
+  const [productNotes, setProductNotes] = useState(""); // edit vaqtida ishlaydi
 
-  // Sahifa yuklanganda IndexedDB dan yuklash
+  const [expandedId, setExpandedId] = useState(null);
+
   useEffect(() => {
     (async () => {
       await openDB();
       const saved = await getAccordionsFromDB();
-      if (saved.length > 0) {
-        setAccordions(saved);
-      }
-      setLoading(false); // ma’lumot yuklandi
+      if (saved.length > 0) setAccordions(saved);
+      setLoading(false);
     })();
   }, []);
 
-  // O'zgarish bo'lsa IndexedDB ga yozish
   useEffect(() => {
-    if (db && !loading) {
-      saveAccordionsToDB(accordions);
-    }
+    if (db && !loading) saveAccordionsToDB(accordions);
   }, [accordions, loading]);
 
   const handleAddAccordion = () => {
@@ -101,14 +102,28 @@ export default function App() {
       owner: newOwner,
       products: [],
       chatId: "",
+      notes: "",
+      showFullNotes: false,
     };
     setAccordions((prev) => [...prev, newAcc]);
     setNewOwner("");
     setOpenModal(false);
   };
 
+  const handleEditProduct = (accId, index) => {
+    const acc = accordions.find((a) => a.id === accId);
+    if (!acc) return;
+    const prod = acc.products[index];
+    setProductName(prod.name);
+    setProductPrice(prod.price);
+    setProductNotes(acc.notes || ""); // izohni edit qilish
+    setCurrentId(accId);
+    setEditIndex(index);
+  };
+
   const handleAddProduct = (accId) => {
     if (productName.trim() === "" || productPrice.trim() === "") return;
+
     setAccordions((prev) =>
       prev.map((acc) =>
         acc.id === accId
@@ -118,23 +133,18 @@ export default function App() {
                 ...acc.products,
                 { name: productName, price: productPrice },
               ],
+              notes: productNotes || acc.notes, // input bo‘sh bo‘lsa eski izoh saqlanadi
             }
           : acc
       )
     );
+
+    // inputlarni tozalash
     setProductName("");
     setProductPrice("");
+    setProductNotes("");
     setCurrentId(null);
     setEditIndex(null);
-  };
-
-  const handleEditProduct = (accId, index) => {
-    const acc = accordions.find((a) => a.id === accId);
-    const prod = acc.products[index];
-    setProductName(prod.name);
-    setProductPrice(prod.price);
-    setCurrentId(accId);
-    setEditIndex(index);
   };
 
   const handleUpdateProduct = () => {
@@ -146,12 +156,15 @@ export default function App() {
               products: acc.products.map((p, i) =>
                 i === editIndex ? { name: productName, price: productPrice } : p
               ),
+              notes: productNotes || acc.notes,
             }
           : acc
       )
     );
+
     setProductName("");
     setProductPrice("");
+    setProductNotes("");
     setCurrentId(null);
     setEditIndex(null);
   };
@@ -168,6 +181,7 @@ export default function App() {
 
   const handleDeleteAccordion = (accId) => {
     setAccordions((prev) => prev.filter((acc) => acc.id !== accId));
+    if (expandedId === accId) setExpandedId(null);
   };
 
   const handleDeleteAllProducts = (accId) => {
@@ -182,33 +196,50 @@ export default function App() {
     );
   };
 
-  const handleSendToTelegram = async (acc) => {
-    if (!acc.chatId.trim()) return alert("Chat ID kiritilmagan!");
-    if (acc.products.length === 0) return alert("Mahsulotlar ro'yxati bo'sh!");
+  const toggleShowNotes = (accId) => {
+    setAccordions((prev) =>
+      prev.map((acc) =>
+        acc.id === accId ? { ...acc, showFullNotes: !acc.showFullNotes } : acc
+      )
+    );
+  };
 
-    const message = acc.products
-      .map((p, i) => `${i + 1}. ${p.name} - ${p.price}`)
-      .join("\n");
+  const handleSendToTelegram = async (acc) => {
+    const chatId = acc.chatId.trim();
+    if (!chatId) return alert("Chat ID kiritilmagan!");
+    if (acc.products.length === 0 && !acc.notes?.trim())
+      return alert("Mahsulotlar yoki izoh bo'sh!");
+
+    let message = "";
+    if (acc.products.length > 0) {
+      message += acc.products
+        .map((p, i) => `${i + 1}. ${p.name} - ${p.price}`)
+        .join("\n");
+    }
+    if (acc.notes?.trim()) {
+      message += "\n\nIzoh:\n" + acc.notes.trim();
+    }
 
     try {
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      await fetch("http://localhost:5000/sendMessage", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          chat_id: acc.chatId.startsWith("@") ? acc.chatId : Number(acc.chatId),
-          text: message,
+          clientUser: chatId,
+          message: message,
         }),
       });
       alert("Telegramga yuborildi!");
+      setAccordions((prev) =>
+        prev.map((a) => (a.id === acc.id ? { ...a, showFullNotes: false } : a))
+      );
     } catch (error) {
       console.error(error);
       alert("Xatolik yuz berdi!");
     }
   };
 
-  if (loading) {
-    return <Typography>Yuklanmoqda...</Typography>;
-  }
+  if (loading) return <Typography>Yuklanmoqda...</Typography>;
 
   return (
     <div style={{ padding: 20 }} className={styles.container}>
@@ -219,7 +250,12 @@ export default function App() {
       >
         {accordions.map((acc) => (
           <Grid item xs={6} sm={12} key={acc.id}>
-            <Accordion>
+            <Accordion
+              expanded={expandedId === acc.id}
+              onChange={() =>
+                setExpandedId(expandedId === acc.id ? null : acc.id)
+              }
+            >
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                 <Typography sx={{ flexGrow: 1 }}>{acc.owner}</Typography>
                 <IconButton onClick={() => handleDeleteAccordion(acc.id)}>
@@ -228,12 +264,13 @@ export default function App() {
               </AccordionSummary>
               <AccordionDetails>
                 <TextField
-                  label="Chat ID"
+                  label="UserName yoki Chat ID"
                   fullWidth
                   value={acc.chatId}
                   onChange={(e) => handleChatIdChange(acc.id, e.target.value)}
                   style={{ marginBottom: 10 }}
                 />
+
                 <List>
                   {acc.products.map((p, index) => (
                     <ListItem key={index}>
@@ -255,7 +292,49 @@ export default function App() {
                       </ListItemSecondaryAction>
                     </ListItem>
                   ))}
+
+                  {acc.notes && acc.notes.trim() !== "" && (
+                    <div
+                      style={{
+                        marginTop: 6,
+                        marginBottom: 8,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        component="span"
+                        onClick={() => toggleShowNotes(acc.id)}
+                        style={{
+                          cursor: "pointer",
+                          fontWeight: 600,
+                          paddingLeft: "15px",
+                        }}
+                      >
+                        Izoh:
+                      </Typography>
+
+                      <Typography variant="body2" component="span">
+                        {acc.showFullNotes
+                          ? acc.notes
+                          : truncateWords(acc.notes, 2)}
+                      </Typography>
+
+                      {acc.notes.trim().split(/\s+/).length > 2 && (
+                        <Button
+                          size="small"
+                          onClick={() => toggleShowNotes(acc.id)}
+                          style={{ textTransform: "none", marginLeft: 8 }}
+                        >
+                          {acc.showFullNotes ? "less" : "more"}
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </List>
+
                 <TextField
                   label="Mahsulot nomi"
                   fullWidth
@@ -268,6 +347,16 @@ export default function App() {
                   fullWidth
                   value={productPrice}
                   onChange={(e) => setProductPrice(e.target.value)}
+                  style={{ marginBottom: 10 }}
+                />
+
+                <TextField
+                  label="Qo‘shimcha izoh"
+                  fullWidth
+                  multiline
+                  minRows={3}
+                  value={productNotes} // faqat inputga bog‘langan state
+                  onChange={(e) => setProductNotes(e.target.value)}
                   style={{ marginBottom: 10 }}
                 />
                 {editIndex !== null && currentId === acc.id ? (
@@ -288,6 +377,7 @@ export default function App() {
                     Qo‘shish
                   </Button>
                 )}
+
                 <Button
                   variant="outlined"
                   color="success"
@@ -311,6 +401,7 @@ export default function App() {
           </Grid>
         ))}
       </Grid>
+
       <Button
         variant="contained"
         color="primary"
@@ -327,6 +418,7 @@ export default function App() {
       >
         <AddIcon />
       </Button>
+
       <Dialog open={openModal} onClose={() => setOpenModal(false)}>
         <DialogTitle>Egasining ismini kiriting</DialogTitle>
         <DialogContent>
