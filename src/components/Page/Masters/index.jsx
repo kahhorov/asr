@@ -16,16 +16,26 @@ import {
   ListItem,
   ListItemText,
   ListItemSecondaryAction,
+  AppBar,
+  Toolbar,
+  Badge,
+  Drawer,
+  Tabs,
+  Tab,
+  Box,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
+import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import CheckIcon from "@mui/icons-material/Check";
+import CancelIcon from "@mui/icons-material/Cancel";
 import styles from "./style.module.css";
 
-// IndexedDB sozlamalari
-const DB_NAME = "accordionDB";
+const DB_NAME = "accordionDB_v2";
 const STORE_NAME = "accordions";
+const CART_STORE = "cart";
 let db;
 
 function openDB() {
@@ -35,6 +45,9 @@ function openDB() {
       db = event.target.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME, { keyPath: "id" });
+      }
+      if (!db.objectStoreNames.contains(CART_STORE)) {
+        db.createObjectStore(CART_STORE, { keyPath: "id" });
       }
     };
     request.onsuccess = (event) => {
@@ -46,47 +59,80 @@ function openDB() {
 }
 
 function saveAccordionsToDB(accordions) {
+  if (!db) return;
   const tx = db.transaction(STORE_NAME, "readwrite");
   const store = tx.objectStore(STORE_NAME);
-  store.clear();
-  accordions.forEach((acc) => store.put(acc));
+  const clearReq = store.clear();
+  clearReq.onsuccess = () => {
+    accordions.forEach((acc) => store.put(acc));
+  };
 }
 
 function getAccordionsFromDB() {
   return new Promise((resolve) => {
+    if (!db) return resolve([]);
     const tx = db.transaction(STORE_NAME, "readonly");
     const store = tx.objectStore(STORE_NAME);
     const request = store.getAll();
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = () => resolve([]);
   });
 }
 
-// Helper: birinchi N so'zni kesib olish
-const truncateWords = (text = "", wordCount = 2) => {
-  const words = text.trim().split(/\s+/);
-  if (words.length <= wordCount) return text;
-  return words.slice(0, wordCount).join(" ") + "...";
-};
+function saveCartToDB(cart) {
+  if (!db) return;
+  const tx = db.transaction(CART_STORE, "readwrite");
+  const store = tx.objectStore(CART_STORE);
+  const clearReq = store.clear();
+  clearReq.onsuccess = () => {
+    cart.forEach((c) => store.put(c));
+  };
+}
 
-export default function App() {
+function getCartFromDB() {
+  return new Promise((resolve) => {
+    if (!db) return resolve([]);
+    const tx = db.transaction(CART_STORE, "readonly");
+    const store = tx.objectStore(CART_STORE);
+    const request = store.getAll();
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = () => resolve([]);
+  });
+}
+
+export default () => {
   const [accordions, setAccordions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [newOwner, setNewOwner] = useState("");
   const [currentId, setCurrentId] = useState(null);
   const [editIndex, setEditIndex] = useState(null);
-
   const [productName, setProductName] = useState("");
   const [productPrice, setProductPrice] = useState("");
-  const [productNotes, setProductNotes] = useState(""); // edit vaqtida ishlaydi
-
+  const [productNotes, setProductNotes] = useState("");
+  const [sending, setSending] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [cartTab, setCartTab] = useState(0);
+  const [sentAccIds, setSentAccIds] = useState([]);
+  const [cartAccordions, setCartAccordions] = useState([]);
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [statusPendingAcc, setStatusPendingAcc] = useState(null);
 
+  // ⬇️ Shu yerga CART'ni yuklash qo'shildi
   useEffect(() => {
     (async () => {
       await openDB();
       const saved = await getAccordionsFromDB();
-      if (saved.length > 0) setAccordions(saved);
+      const normalized = (saved || []).map((s) => ({
+        ...s,
+        status: s.status || null,
+      }));
+      if (normalized.length > 0) setAccordions(normalized);
+
+      const cartSaved = await getCartFromDB(); // <-- qoʻshildi
+      if (cartSaved.length > 0) setCartAccordions(cartSaved); // <-- qoʻshildi
+
       setLoading(false);
     })();
   }, []);
@@ -94,6 +140,10 @@ export default function App() {
   useEffect(() => {
     if (db && !loading) saveAccordionsToDB(accordions);
   }, [accordions, loading]);
+
+  useEffect(() => {
+    if (db) saveCartToDB(cartAccordions);
+  }, [cartAccordions]);
 
   const handleAddAccordion = () => {
     if (newOwner.trim() === "") return;
@@ -104,28 +154,36 @@ export default function App() {
       chatId: "",
       notes: "",
       showFullNotes: false,
+      status: null,
     };
     setAccordions((prev) => [...prev, newAcc]);
     setNewOwner("");
     setOpenModal(false);
   };
 
-  const handleEditProduct = (accId, index) => {
+  const truncateWords = (text = "", wordCount = 2) => {
+    const w = text.trim().split(/\s+/);
+    return w.length <= wordCount
+      ? text
+      : w.slice(0, wordCount).join(" ") + "...";
+  };
+
+  const priceToNumber = (p) => Number(String(p).replace(/[^0-9.-]+/g, "")) || 0;
+
+  const handleEditProduct = (accId, idx) => {
     const acc = accordions.find((a) => a.id === accId);
-    if (!acc) return;
-    const prod = acc.products[index];
+    const prod = acc.products[idx];
     setProductName(prod.name);
     setProductPrice(prod.price);
-    setProductNotes(acc.notes || ""); // izohni edit qilish
+    setProductNotes(acc.notes || "");
     setCurrentId(accId);
-    setEditIndex(index);
+    setEditIndex(idx);
   };
 
   const handleAddProduct = (accId) => {
-    if (productName.trim() === "" || productPrice.trim() === "") return;
-
-    setAccordions((prev) =>
-      prev.map((acc) =>
+    if (!productName.trim() || !productPrice.trim()) return;
+    setAccordions((p) =>
+      p.map((acc) =>
         acc.id === accId
           ? {
               ...acc,
@@ -133,13 +191,11 @@ export default function App() {
                 ...acc.products,
                 { name: productName, price: productPrice },
               ],
-              notes: productNotes || acc.notes, // input bo‘sh bo‘lsa eski izoh saqlanadi
+              notes: productNotes || acc.notes,
             }
           : acc
       )
     );
-
-    // inputlarni tozalash
     setProductName("");
     setProductPrice("");
     setProductNotes("");
@@ -148,20 +204,21 @@ export default function App() {
   };
 
   const handleUpdateProduct = () => {
-    setAccordions((prev) =>
-      prev.map((acc) =>
+    setAccordions((p) =>
+      p.map((acc) =>
         acc.id === currentId
           ? {
               ...acc,
-              products: acc.products.map((p, i) =>
-                i === editIndex ? { name: productName, price: productPrice } : p
+              products: acc.products.map((pr, i) =>
+                i === editIndex
+                  ? { name: productName, price: productPrice }
+                  : pr
               ),
               notes: productNotes || acc.notes,
             }
           : acc
       )
     );
-
     setProductName("");
     setProductPrice("");
     setProductNotes("");
@@ -169,82 +226,130 @@ export default function App() {
     setEditIndex(null);
   };
 
-  const handleDeleteProduct = (accId, index) => {
-    setAccordions((prev) =>
-      prev.map((acc) =>
+  const handleDeleteProduct = (accId, i) => {
+    setAccordions((p) =>
+      p.map((acc) =>
         acc.id === accId
-          ? { ...acc, products: acc.products.filter((_, i) => i !== index) }
+          ? { ...acc, products: acc.products.filter((_, idx) => idx !== i) }
           : acc
       )
     );
   };
 
   const handleDeleteAccordion = (accId) => {
-    setAccordions((prev) => prev.filter((acc) => acc.id !== accId));
+    setAccordions((p) => p.filter((acc) => acc.id !== accId));
     if (expandedId === accId) setExpandedId(null);
+    setSentAccIds((p) => p.filter((id) => id !== accId));
   };
 
   const handleDeleteAllProducts = (accId) => {
-    setAccordions((prev) =>
-      prev.map((acc) =>
+    setAccordions((p) =>
+      p.map((acc) =>
         acc.id === accId ? { ...acc, products: [], notes: "" } : acc
       )
     );
   };
 
-  const handleChatIdChange = (accId, value) => {
-    setAccordions((prev) =>
-      prev.map((acc) => (acc.id === accId ? { ...acc, chatId: value } : acc))
+  const handleChatIdChange = (accId, v) => {
+    setAccordions((p) =>
+      p.map((acc) => (acc.id === accId ? { ...acc, chatId: v } : acc))
     );
   };
 
   const toggleShowNotes = (accId) => {
-    setAccordions((prev) =>
-      prev.map((acc) =>
+    setAccordions((p) =>
+      p.map((acc) =>
         acc.id === accId ? { ...acc, showFullNotes: !acc.showFullNotes } : acc
       )
     );
   };
 
+  const handleSetStatus = (accId, st) => {
+    setAccordions((p) =>
+      p.map((acc) => (acc.id === accId ? { ...acc, status: st } : acc))
+    );
+  };
+
+  const calculateTotal = (arr) =>
+    arr.reduce((s, p) => s + priceToNumber(p.price), 0);
+
   const handleSendToTelegram = async (acc) => {
-    const chatId = acc.chatId.trim();
-    if (!chatId) return alert("Chat ID kiritilmagan!");
-    if (acc.products.length === 0 && !acc.notes?.trim())
-      return alert("Mahsulotlar yoki izoh bo'sh!");
-
-    let message = "";
-    if (acc.products.length > 0) {
-      message += acc.products
-        .map((p, i) => `${i + 1}. ${p.name} - ${p.price}`)
-        .join("\n");
-    }
-    if (acc.notes?.trim()) {
-      message += "\n\nIzoh:\n" + acc.notes.trim();
-    }
-
+    if (sending) return;
+    setSending(true);
     try {
-      await fetch("https://server-srsc.onrender.com/sendMessage", {
+      if (!acc.chatId.trim()) return alert("Chat ID kiritilmagan!");
+      if (acc.products.length === 0 && !acc.notes?.trim())
+        return alert("Mahsulot yoki izoh yo'q!");
+
+      let msg = "";
+      if (acc.products.length)
+        msg += acc.products
+          .map((p, i) => `${i + 1}. ${p.name}\nNarxi: ${p.price}`)
+          .join("\n\n");
+      if (acc.notes?.trim()) msg += "\n\nIzoh:\n" + acc.notes.trim();
+
+      const res = await fetch("https://server-srsc.onrender.com/sendMessage", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          clientUser: chatId, // acc.chatId ni yuborish kerak
-          message: message, // mahsulotlar va izohni yuborish
-        }),
+        body: JSON.stringify({ clientUser: acc.chatId.trim(), message: msg }),
       });
-      alert("Telegramga yuborildi!");
-      setAccordions((prev) =>
-        prev.map((a) => (a.id === acc.id ? { ...a, showFullNotes: false } : a))
-      );
-    } catch (error) {
-      console.error(error);
+      if (!res.ok) throw new Error("Server error");
+
+      const clone = JSON.parse(JSON.stringify(acc));
+      setStatusPendingAcc(clone);
+      setStatusModalOpen(true);
+      setSentAccIds((p) => (p.includes(acc.id) ? p : [...p, acc.id]));
+    } catch (e) {
       alert("Xatolik yuz berdi!");
+    } finally {
+      setSending(false);
     }
+  };
+
+  const handleSaveStatus = (status) => {
+    const newAcc = {
+      ...statusPendingAcc,
+      id: Date.now(),
+      status,
+      createdAt: new Date().toISOString(),
+    };
+    setCartAccordions((p) => [...p, newAcc]);
+    setAccordions((p) =>
+      p.map((acc) =>
+        acc.id === statusPendingAcc.id ? { ...acc, status } : acc
+      )
+    );
+    setStatusModalOpen(false);
+    setStatusPendingAcc(null);
+    setProductName("");
+    setProductPrice("");
+    setProductNotes("");
   };
 
   if (loading) return <Typography>Yuklanmoqda...</Typography>;
 
+  const tolanganlar = cartAccordions.filter((a) => a.status === "paid");
+  const tolanmaganlar = cartAccordions.filter((a) => a.status === "unpaid");
+
   return (
     <div style={{ padding: 20 }} className={styles.container}>
+      {/* NAVBAR with cart badge */}
+      <AppBar position="static" color="primary" sx={{ mb: 2 }}>
+        <Toolbar>
+          <Typography variant="h6" sx={{ flexGrow: 1 }}>
+            Mening Accordions
+          </Typography>
+          <IconButton color="inherit" onClick={() => setCartOpen(true)}>
+            <Badge
+              badgeContent={tolanganlar.length + tolanmaganlar.length}
+              color="error"
+            >
+              <ShoppingCartIcon />
+            </Badge>
+          </IconButton>
+        </Toolbar>
+      </AppBar>
+
       <Grid
         container
         spacing={2}
@@ -257,13 +362,47 @@ export default function App() {
               onChange={() =>
                 setExpandedId(expandedId === acc.id ? null : acc.id)
               }
+              style={{
+                border:
+                  acc.status === "paid"
+                    ? "2px solid green"
+                    : acc.status === "unpaid"
+                    ? "2px solid red"
+                    : "1px solid #ccc",
+                borderRadius: 6,
+              }}
             >
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography sx={{ flexGrow: 1 }}>{acc.owner}</Typography>
-                <IconButton onClick={() => handleDeleteAccordion(acc.id)}>
+              <AccordionSummary
+                expandIcon={<ExpandMoreIcon />}
+                aria-controls={`panel-${acc.id}-content`}
+                id={`panel-${acc.id}-header`}
+              >
+                <Typography
+                  sx={{
+                    flexGrow: 1,
+                    color:
+                      acc.status === "paid"
+                        ? "green"
+                        : acc.status === "unpaid"
+                        ? "red"
+                        : "inherit",
+                  }}
+                >
+                  {acc.owner}
+                </Typography>
+
+                {/* NOTE: MoreVertIcon (3 nuqta) olib tashlandi */}
+                {/* Quick delete action kept */}
+                <IconButton
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteAccordion(acc.id);
+                  }}
+                >
                   <DeleteIcon />
                 </IconButton>
               </AccordionSummary>
+
               <AccordionDetails>
                 <TextField
                   label="Username yoki Chat ID"
@@ -275,7 +414,7 @@ export default function App() {
 
                 <List>
                   {acc.products.map((p, index) => (
-                    <ListItem key={index}>
+                    <ListItem key={index} divider>
                       <ListItemText
                         primary={p.name}
                         secondary={`Narxi: ${p.price}`}
@@ -295,6 +434,7 @@ export default function App() {
                     </ListItem>
                   ))}
                 </List>
+
                 {acc.notes && acc.notes.trim() !== "" && (
                   <div
                     style={{
@@ -303,7 +443,6 @@ export default function App() {
                       display: "flex",
                       alignItems: "start",
                       gap: "10px",
-                      // satr bo‘lib tushadi
                       flexWrap: "wrap",
                       width: "100%",
                     }}
@@ -311,10 +450,7 @@ export default function App() {
                     <Typography
                       variant="body2"
                       component="span"
-                      style={{
-                        fontWeight: 600,
-                        paddingLeft: "15px",
-                      }}
+                      style={{ fontWeight: 600, paddingLeft: "15px" }}
                     >
                       Izoh:
                     </Typography>
@@ -364,10 +500,11 @@ export default function App() {
                   fullWidth
                   multiline
                   minRows={3}
-                  value={productNotes} // faqat inputga bog‘langan state
+                  value={productNotes}
                   onChange={(e) => setProductNotes(e.target.value)}
                   style={{ marginBottom: 10 }}
                 />
+
                 {editIndex !== null && currentId === acc.id ? (
                   <Button
                     variant="contained"
@@ -391,11 +528,13 @@ export default function App() {
                   variant="outlined"
                   color="success"
                   fullWidth
+                  disabled={sending}
                   style={{ marginTop: 10 }}
                   onClick={() => handleSendToTelegram(acc)}
                 >
-                  Telegramga yuborish
+                  {sending ? "Yuborilmoqda..." : "Telegramga yuborish"}
                 </Button>
+
                 <Button
                   variant="outlined"
                   color="error"
@@ -405,6 +544,25 @@ export default function App() {
                 >
                   Barchasini o‘chirish
                 </Button>
+
+                {/* show total */}
+                {acc.products.length > 0 && (
+                  <Typography
+                    variant="subtitle1"
+                    sx={{
+                      mt: 2,
+                      fontWeight: "bold",
+                      color:
+                        acc.status === "paid"
+                          ? "green"
+                          : acc.status === "unpaid"
+                          ? "red"
+                          : "inherit",
+                    }}
+                  >
+                    Umumiy summa: {calculateTotal(acc.products)}
+                  </Typography>
+                )}
               </AccordionDetails>
             </Accordion>
           </Grid>
@@ -446,6 +604,77 @@ export default function App() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Korzina (Drawer) */}
+      <Drawer anchor="right" open={cartOpen} onClose={() => setCartOpen(false)}>
+        <Box sx={{ width: 420, p: 2 }}>
+          <Tabs
+            value={cartTab}
+            onChange={(e, v) => setCartTab(v)}
+            variant="fullWidth"
+          >
+            <Tab label={`To‘langan (${tolanganlar.length})`} />
+            <Tab label={`To‘lanmagan (${tolanmaganlar.length})`} />
+          </Tabs>
+
+          <Box sx={{ mt: 2 }}>
+            {(cartTab === 0 ? tolanganlar : tolanmaganlar).map((acc) => (
+              <Accordion key={acc.id} sx={{ mb: 1 }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography sx={{ color: cartTab === 0 ? "green" : "red" }}>
+                    {acc.owner || acc.chatId}
+                  </Typography>
+                </AccordionSummary>
+
+                <AccordionDetails>
+                  <List>
+                    {acc.products.map((p, i) => (
+                      <ListItem key={i} divider>
+                        <ListItemText
+                          primary={p.name}
+                          secondary={`Narxi: ${p.price}`}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                  <Typography fontWeight="bold">
+                    Umumiy summa: {calculateTotal(acc.products)}
+                  </Typography>
+                </AccordionDetails>
+              </Accordion>
+            ))}
+          </Box>
+        </Box>
+      </Drawer>
+
+      {/* STATUS tanlash modali (Telegramga muvaffaqiyatli yuborilgach) */}
+      <Dialog open={statusModalOpen} onClose={() => setStatusModalOpen(false)}>
+        <DialogTitle>Holatini belgilang</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Telegramga muvaffaqiyatli yuborildi. Endi bu yozuvni qaysi holatga
+            qo'shasiz?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            variant="contained"
+            color="success"
+            startIcon={<CheckIcon />}
+            onClick={() => handleSaveStatus("paid")}
+          >
+            To‘langan
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            startIcon={<CancelIcon />}
+            onClick={() => handleSaveStatus("unpaid")}
+          >
+            To‘lanmagan
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
-}
+};
