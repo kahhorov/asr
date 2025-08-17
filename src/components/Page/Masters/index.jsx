@@ -186,7 +186,9 @@ export default function App() {
 
   const handleDeleteAllProducts = (accId) => {
     setAccordions((prev) =>
-      prev.map((acc) => (acc.id === accId ? { ...acc, products: [] } : acc))
+      prev.map((acc) =>
+        acc.id === accId ? { ...acc, products: [], notes: "" } : acc
+      )
     );
   };
 
@@ -292,48 +294,55 @@ export default function App() {
                       </ListItemSecondaryAction>
                     </ListItem>
                   ))}
-
-                  {acc.notes && acc.notes.trim() !== "" && (
-                    <div
+                </List>
+                {acc.notes && acc.notes.trim() !== "" && (
+                  <div
+                    style={{
+                      marginTop: 6,
+                      marginBottom: 8,
+                      display: "flex",
+                      alignItems: "start",
+                      gap: "10px",
+                      // satr bo‘lib tushadi
+                      flexWrap: "wrap",
+                      width: "100%",
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      component="span"
                       style={{
-                        marginTop: 6,
-                        marginBottom: 8,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
+                        fontWeight: 600,
+                        paddingLeft: "15px",
                       }}
                     >
-                      <Typography
-                        variant="body2"
-                        component="span"
+                      Izoh:
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      component="span"
+                      style={{
+                        wordBreak: "break-word",
+                        whiteSpace: "normal",
+                        padding: "10px 20px",
+                      }}
+                    >
+                      {acc.showFullNotes
+                        ? acc.notes
+                        : truncateWords(acc.notes, 2)}
+                    </Typography>
+
+                    {acc.notes.trim().split(/\s+/).length > 2 && (
+                      <Button
+                        size="small"
                         onClick={() => toggleShowNotes(acc.id)}
-                        style={{
-                          cursor: "pointer",
-                          fontWeight: 600,
-                          paddingLeft: "15px",
-                        }}
+                        style={{ textTransform: "none" }}
                       >
-                        Izoh:
-                      </Typography>
-
-                      <Typography variant="body2" component="span">
-                        {acc.showFullNotes
-                          ? acc.notes
-                          : truncateWords(acc.notes, 2)}
-                      </Typography>
-
-                      {acc.notes.trim().split(/\s+/).length > 2 && (
-                        <Button
-                          size="small"
-                          onClick={() => toggleShowNotes(acc.id)}
-                          style={{ textTransform: "none", marginLeft: 8 }}
-                        >
-                          {acc.showFullNotes ? "less" : "more"}
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </List>
+                        {acc.showFullNotes ? "less" : "more"}
+                      </Button>
+                    )}
+                  </div>
+                )}
 
                 <TextField
                   label="Mahsulot nomi"
