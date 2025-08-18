@@ -4,6 +4,7 @@ import Masters from "./components/Page/Masters";
 import Clients from "./components/Page/Clients";
 import Debtors from "./components/Page/Debtors";
 import { Route, Routes } from "react-router-dom";
+import Main from "./components/Main";
 
 function App() {
   // Savdo va accordionlar uchun state
@@ -81,7 +82,8 @@ function App() {
     <div>
       <Navbar cartAccordions={cartAccordions} onLogout={handleLogout} />
 
-      <Routes>
+      <Routes path="/">
+        <Route index element={<Main />} />
         <Route
           path="/masters"
           element={
