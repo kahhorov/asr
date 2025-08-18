@@ -3,7 +3,7 @@ import React from "react";
 export default () => {
   return (
     <div>
-      <h1>Qarizlar</h1>
+      <p>Qarizlar</p>
     </div>
   );
 };
