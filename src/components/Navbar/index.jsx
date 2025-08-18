@@ -16,17 +16,22 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  Button,
+  Menu,
+  MenuItem,
 } from "@mui/material";
 import {
   ShoppingCart,
   Menu as MenuIcon,
   Close,
   ExpandMore,
+  MoreVert,
 } from "@mui/icons-material";
-import { FaCircleUser } from "react-icons/fa6";
+import { IoMdClose } from "react-icons/io";
 import { Link, useLocation } from "react-router-dom";
 import siteLogo from "../../Images/siteLogo.png";
 import styles from "./style.module.css";
+import { MdDeleteForever } from "react-icons/md";
 
 function a11yProps(index) {
   return {
@@ -39,11 +44,14 @@ const priceToNumber = (p) => Number(String(p).replace(/[^0-9.-]+/g, "")) || 0;
 const sumProducts = (products = []) =>
   products.reduce((s, p) => s + priceToNumber(p.price), 0);
 
-const Navbar = ({ cartAccordions = [] }) => {
+const Navbar = ({ cartAccordions = [], setCartAccordions }) => {
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [tabValue, setTabValue] = useState(0);
+
+  // accordion control state
+  const [expandedId, setExpandedId] = useState(false);
 
   // route highlight
   const desktopTabValue = useMemo(() => {
@@ -55,56 +63,147 @@ const Navbar = ({ cartAccordions = [] }) => {
 
   const toggleDrawer = () => setDrawerOpen((p) => !p);
   const toggleMenu = () => setMenuOpen((p) => !p);
-  const handleCartTabChange = (_e, v) => setTabValue(v);
+  const handleCartTabChange = (_e, v) => {
+    setTabValue(v);
+    setExpandedId(false); // tab o'zgarsa accordion yopilsin
+  };
 
   const paid = cartAccordions.filter((c) => c.status === "to'langan");
   const unpaid = cartAccordions.filter((c) => c.status === "to'lanmagan");
 
-  const AccordionList = ({ data, color }) => (
-    <>
-      {data.map((item) => (
-        <Accordion key={item.id} sx={{ mb: 1 }}>
-          <AccordionSummary expandIcon={<ExpandMore />}>
-            <Typography sx={{ fontWeight: 700, color }}>
-              {item.master}
-            </Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <List dense disablePadding>
-              {item.products.map((p, i) => (
-                <ListItem key={i} disableGutters sx={{ py: 0.2 }}>
-                  <ListItemText
-                    primaryTypographyProps={{ fontSize: 13 }}
-                    secondaryTypographyProps={{ fontSize: 12 }}
-                    primary={p.name}
-                    secondary={`Narxi: ${p.price}`}
-                  />
-                </ListItem>
-              ))}
-            </List>
-            {item.notes?.trim() ? (
-              <Typography sx={{ mt: 0.5 }} variant="caption">
-                Izoh: {item.notes}
+  // o‘chirish
+  const deleteAccordion = (id) => {
+    setCartAccordions((prev) => prev.filter((c) => c.id !== id));
+    if (expandedId === id) setExpandedId(false); // o'chirilgan ochiq bo'lsa yopilsin
+  };
+
+  // statusni o‘zgartirish
+  const changeStatus = (id, newStatus) => {
+    setCartAccordions((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, status: newStatus } : c))
+    );
+  };
+
+  const AccordionList = ({ data, color }) => {
+    const [anchorEl, setAnchorEl] = useState(null);
+    const [selectedId, setSelectedId] = useState(null);
+
+    const handleMenuOpen = (e, id) => {
+      setAnchorEl(e.currentTarget);
+      setSelectedId(id);
+    };
+
+    const handleMenuClose = () => {
+      setAnchorEl(null);
+      setSelectedId(null);
+    };
+
+    const selectedItem = data.find((c) => c.id === selectedId);
+
+    return (
+      <>
+        {data.map((item) => (
+          <Accordion
+            key={item.id}
+            sx={{ mb: 1 }}
+            expanded={expandedId === item.id}
+            onChange={() =>
+              setExpandedId(expandedId === item.id ? false : item.id)
+            }
+          >
+            <AccordionSummary expandIcon={<ExpandMore />}>
+              <Typography sx={{ fontWeight: 700, color, flexGrow: 1 }}>
+                {item.master}
               </Typography>
-            ) : null}
-            <Typography sx={{ mt: 0.5, fontWeight: 700 }} variant="body2">
-              Umumiy: {sumProducts(item.products)} so'm
-            </Typography>
-          </AccordionDetails>
-        </Accordion>
-      ))}
-      {data.length === 0 && (
-        <Typography variant="body2" color="text.secondary">
-          Bo‘sh
-        </Typography>
-      )}
-    </>
-  );
+              {/* 3 nuqta menyu */}
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleMenuOpen(e, item.id);
+                }}
+              >
+                <MoreVert />
+              </IconButton>
+            </AccordionSummary>
+            <AccordionDetails>
+              <List dense disablePadding>
+                {item.products.map((p, i) => (
+                  <ListItem key={i} disableGutters sx={{ py: 0.2 }}>
+                    <ListItemText
+                      primaryTypographyProps={{ fontSize: 13 }}
+                      secondaryTypographyProps={{ fontSize: 12 }}
+                      primary={p.name}
+                      secondary={`Narxi: ${p.price}`}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+              {item.notes?.trim() ? (
+                <Typography sx={{ mt: 0.5 }} variant="caption">
+                  Izoh: {item.notes}
+                </Typography>
+              ) : null}
+              <Typography sx={{ mt: 0.5, fontWeight: 700 }} variant="body2">
+                Umumiy: {sumProducts(item.products)}.000 so'm
+              </Typography>
+            </AccordionDetails>
+          </Accordion>
+        ))}
+        {/* MENU */}
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+        >
+          <MenuItem
+            onClick={() => {
+              deleteAccordion(selectedId);
+              handleMenuClose();
+            }}
+          >
+            <MdDeleteForever />
+            O‘chirish
+          </MenuItem>
+          <MenuItem
+            disabled={selectedItem?.status === "to'langan"}
+            onClick={() => {
+              changeStatus(selectedId, "to'langan");
+              handleMenuClose();
+            }}
+          >
+            ✅ To‘langan
+          </MenuItem>
+          <MenuItem
+            disabled={selectedItem?.status === "to'lanmagan"}
+            onClick={() => {
+              changeStatus(selectedId, "to'lanmagan");
+              handleMenuClose();
+            }}
+          >
+            ❌ To‘lanmagan
+          </MenuItem>
+        </Menu>
+
+        {data.length === 0 && (
+          <Typography variant="body2" color="text.secondary">
+            Bo‘sh
+          </Typography>
+        )}
+      </>
+    );
+  };
+
+  const CloseMenu = () => setMenuOpen(false);
 
   return (
     <>
       {/* NAVBAR */}
-      <AppBar position="static" color="default" sx={{ boxShadow: 2 }}>
+      <AppBar
+        position="static"
+        color="default"
+        sx={{ boxShadow: 2, width: "100%" }}
+      >
         <Toolbar className={styles.container}>
           {/* LOGO */}
           <Link to="/" className={styles.siteLogo}>
@@ -146,23 +245,44 @@ const Navbar = ({ cartAccordions = [] }) => {
       {/* MOBILE NAV */}
       {menuOpen && (
         <Box className={styles.mobileNav}>
-          <Link to="/masters" className={styles.navLink} onClick={toggleMenu}>
-            Ustalar
-          </Link>
-          <Link to="/clients" className={styles.navLink} onClick={toggleMenu}>
-            Klientlar
-          </Link>
-          <Link to="/debtors" className={styles.navLink} onClick={toggleMenu}>
-            Qarizlar
-          </Link>
+          <div className={styles.mobileLogoWrapper}>
+            <Link to={"/"} className={styles.navLink}>
+              <img src={siteLogo} alt="" width={130} />
+            </Link>
+            <Button sx={{ fontSize: "30px" }} onClick={CloseMenu}>
+              <IoMdClose />
+            </Button>
+          </div>
+          <List
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              flexDirection: "column",
+              gap: "30px",
+              textAlign: "start",
+              paddingLeft: "20px",
+            }}
+          >
+            <Link to="/masters" className={styles.navLink} onClick={toggleMenu}>
+              Ustalar
+            </Link>
+            <Link to="/clients" className={styles.navLink} onClick={toggleMenu}>
+              Klientlar
+            </Link>
+            <Link to="/debtors" className={styles.navLink} onClick={toggleMenu}>
+              Qarizlar
+            </Link>
+          </List>
         </Box>
       )}
 
       {/* CART DRAWER */}
       <Drawer anchor="right" open={drawerOpen} onClose={toggleDrawer}>
-        <Box sx={{ width: { xs: 320, sm: 360 } }}>
+        <Box sx={{ width: { xs: "100%", sm: "360px" } }}>
           <Box sx={{ p: 2 }}>
-            <Typography variant="h6">🛒 Korzina</Typography>
+            <Typography variant="h6" onClick={toggleDrawer}>
+              🛒 Korzina
+            </Typography>
           </Box>
           <Divider />
           <Tabs

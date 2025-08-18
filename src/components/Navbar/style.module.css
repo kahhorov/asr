@@ -52,6 +52,10 @@
 .adminInfo span {
   font-size: 20px;
 }
+.mobileLogoWrapper {
+  display: flex;
+  justify-content: space-between;
+}
 
 @media screen and (max-width: 600px) {
   .container {
@@ -64,6 +68,18 @@
   }
   .desktopNav {
     display: none !important;
+  }
+  .mobileNav {
+    padding: 10px 20px;
+  }
+  .navLink {
+    color: #2e2e2f;
+    font-weight: bold;
+    transition: all 0.4s ease;
+  }
+  .navLink:hover {
+    color: #777777;
+    transform: scale(0.9.9);
   }
   .Btn {
     display: flex !important;

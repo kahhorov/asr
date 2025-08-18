@@ -6,17 +6,46 @@
     "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
 }
 
-.themeBtn {
-  border: none;
-  background: none;
-  font-size: 26px;
-  margin-top: 5px;
-}
-.dark {
-  background: #1c1c1cd7;
-  color: #fff !important;
-}
 .app {
   background: #fff;
   color: #000;
+}
+
+/* Burchakni silliq animatsiya qilish uchun aniqlaymiz */
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 80deg;
+  inherits: false;
+}
+
+.liner {
+  /* Boshlang'ich gradientingiz */
+  --angle: 80deg;
+  background: linear-gradient(
+    var(--angle),
+    rgba(9, 9, 121, 1) 38%,
+    rgba(0, 0, 0, 1) 100%
+  );
+  color: #fff;
+
+  /* Ko'rinish uchun o'lchamlar */
+  min-height: 100vh;
+
+  /* Silliq, qatmasdan cheksiz aylanish */
+  animation: spin-angle 12s linear infinite;
+}
+
+@keyframes spin-angle {
+  to {
+    /* 80deg dan boshlab 360° aylanib yana 80deg holatiga keladi */
+    --angle: 440deg;
+  }
+}
+
+.liner input {
+  border-radius: 8px;
+  border: none;
+  outline: none;
+}
+.liner button {
 }

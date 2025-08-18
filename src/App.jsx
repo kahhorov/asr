@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
+import { Route, Routes } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Masters from "./components/Page/Masters";
 import Clients from "./components/Page/Clients";
 import Debtors from "./components/Page/Debtors";
-import { Route, Routes } from "react-router-dom";
 import Main from "./components/Main";
+import "./App.css";
+import { Button } from "@mui/material";
 
 function App() {
   // Savdo va accordionlar uchun state
@@ -50,7 +52,17 @@ function App() {
   if (!isLoggedIn) {
     return (
       <div
-        style={{ maxWidth: "400px", margin: "100px auto", textAlign: "center" }}
+        style={{
+          width: "100%",
+          textAlign: "center",
+          padding: "0 10px",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100vh",
+        }}
+        className="liner"
       >
         <h2>Login</h2>
         <input
@@ -58,21 +70,22 @@ function App() {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          style={{ width: "100%", padding: "10px", margin: "10px 0" }}
+          style={{ width: "20%", padding: "15px", margin: "10px 0" }}
         />
         <input
           type="password"
           placeholder="Parol"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          style={{ width: "100%", padding: "10px", margin: "10px 0" }}
+          style={{ width: "20%", padding: "15px", margin: "10px 0" }}
         />
-        <button
+        <Button
+          variant="outlined"
           onClick={handleLogin}
           style={{ padding: "10px 20px", marginTop: "10px" }}
         >
           Login
-        </button>
+        </Button>
       </div>
     );
   }
@@ -80,10 +93,13 @@ function App() {
   // Agar login bo‘lsa barcha komponentlar chiqadi
   return (
     <div>
-      <Navbar cartAccordions={cartAccordions} onLogout={handleLogout} />
-
-      <Routes path="/">
-        <Route index element={<Main />} />
+      <Navbar
+        cartAccordions={cartAccordions}
+        setCartAccordions={setCartAccordions} // 🔥 qo‘shildi
+        onLogout={handleLogout}
+      />
+      <Routes>
+        <Route path="/" element={<Main />} />
         <Route
           path="/masters"
           element={
@@ -94,7 +110,6 @@ function App() {
             />
           }
         />
-
         <Route
           path="/clients"
           element={
