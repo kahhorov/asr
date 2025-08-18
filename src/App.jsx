@@ -6,26 +6,30 @@ import Masters from "./components/Page/Masters";
 import Clients from "./components/Page/Clients";
 import Debtors from "./components/Page/Debtors";
 import Main from "./components/Main";
-import {
-  Drawer,
-  IconButton,
-  Avatar,
-  Divider,
-  Button,
-  Typography,
-  Box,
-  Paper,
-} from "@mui/material";
+import { Paper } from "@mui/material";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import AccountCircleIcon from "@mui/icons-material/AccountCircle";
-import LogoutIcon from "@mui/icons-material/Logout";
 
 function App() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [panelOpen, setPanelOpen] = useState(false);
+
+  // 🔹 global cartAccordions (localStorage bilan)
+  const [cartAccordions, setCartAccordions] = useState(() => {
+    const saved = localStorage.getItem("cartAccordions");
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // har safar o‘zgarsa localStorage ga yozib qo‘yish
+  useEffect(() => {
+    localStorage.setItem("cartAccordions", JSON.stringify(cartAccordions));
+  }, [cartAccordions]);
+
+  // Mastersdan keladigan eventni ushlash
+  const handleAddToCart = (data) => {
+    setCartAccordions((prev) => [...prev, data]);
+  };
 
   const navigate = useNavigate();
 
@@ -50,7 +54,6 @@ function App() {
     }
 
     if (email === "Asravto@gmail.com" && password === "asravto") {
-      // ✅ To‘g‘ri admin login
       setIsLoggedIn(true);
       localStorage.setItem("isLoggedIn", "true");
       localStorage.setItem("email", email);
@@ -61,7 +64,6 @@ function App() {
 
       setTimeout(() => navigate("/"), 1500);
     } else {
-      // ❌ Xato email yoki parol
       toast.error("⛔ Sizga kirish mumkin emas!", {
         position: "top-center",
       });
@@ -77,6 +79,14 @@ function App() {
     navigate("/");
   };
 
+  // 🔹 umumiy hisoblash funksiyasi
+  const calculateTotal = (arr) =>
+    arr.reduce(
+      (s, p) => s + (Number(String(p.price).replace(/[^0-9.-]+/g, "")) || 0),
+      0
+    );
+
+  // Agar login qilinmagan bo‘lsa → Login page
   if (!isLoggedIn) {
     return (
       <div
@@ -158,6 +168,7 @@ function App() {
     );
   }
 
+  // 🔹 Asosiy UI (login qilingan bo‘lsa)
   return (
     <div>
       {/* Navbar */}
@@ -167,70 +178,45 @@ function App() {
           boxShadow: "0px 3px 10px rgba(0,0,0,0.1)",
         }}
       >
-        <Navbar />
+        <Navbar
+          cartAccordions={cartAccordions}
+          calculateTotal={calculateTotal}
+          handleLogout={handleLogout}
+        />
       </div>
-
-      {/* Account Icon */}
-      <IconButton
-        onClick={() => setPanelOpen(true)}
-        style={{ position: "fixed", top: 20, right: 20, zIndex: 2000 }}
-      >
-        <AccountCircleIcon style={{ fontSize: 40, color: "#4b0082" }} />
-      </IconButton>
-
-      {/* Account Drawer */}
-      <Drawer
-        anchor="right"
-        open={panelOpen}
-        onClose={() => setPanelOpen(false)}
-      >
-        <Box
-          sx={{
-            width: 300,
-            padding: 3,
-            display: "flex",
-            flexDirection: "column",
-            gap: 2,
-          }}
-        >
-          <Avatar
-            sx={{
-              width: 70,
-              height: 70,
-              bgcolor: "#4b0082",
-              alignSelf: "center",
-            }}
-          >
-            {email.charAt(0).toUpperCase()}
-          </Avatar>
-          <Typography variant="h6" sx={{ textAlign: "center", width: "100%" }}>
-            {email}
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ textAlign: "center", width: "100%" }}
-          >
-            👑 Admin
-          </Typography>
-          <Divider sx={{ width: "100%", my: 2 }} />
-          <Button
-            variant="outlined"
-            color="error"
-            startIcon={<LogoutIcon />}
-            onClick={handleLogout}
-            // fullWidth
-          >
-            Logout
-          </Button>
-        </Box>
-      </Drawer>
 
       {/* Routes */}
       <Routes>
         <Route index element={<Main />} />
-        <Route path="/masters" element={<Masters />} />
-        <Route path="/clients" element={<Clients />} />
-        <Route path="/debtors" element={<Debtors />} />
+        <Route
+          path="/masters"
+          element={
+            <Masters
+              cartAccordions={cartAccordions}
+              setCartAccordions={setCartAccordions}
+              handleAddToCart={handleAddToCart}
+            />
+          }
+        />
+
+        <Route
+          path="/clients"
+          element={
+            <Clients
+              cartAccordions={cartAccordions}
+              setCartAccordions={setCartAccordions}
+            />
+          }
+        />
+        <Route
+          path="/debtors"
+          element={
+            <Debtors
+              cartAccordions={cartAccordions}
+              setCartAccordions={setCartAccordions}
+            />
+          }
+        />
       </Routes>
 
       <ToastContainer />

@@ -16,26 +16,19 @@ import {
   ListItem,
   ListItemText,
   ListItemSecondaryAction,
-  AppBar,
-  Toolbar,
-  Badge,
-  Drawer,
-  Tabs,
-  Tab,
-  Box,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
-import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import CheckIcon from "@mui/icons-material/Check";
 import CancelIcon from "@mui/icons-material/Cancel";
+
 import styles from "./style.module.css";
 
+// IndexedDB faqat accordions uchun
 const DB_NAME = "accordionDB_v2";
 const STORE_NAME = "accordions";
-const CART_STORE = "cart";
 let db;
 
 function openDB() {
@@ -45,9 +38,6 @@ function openDB() {
       db = event.target.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME, { keyPath: "id" });
-      }
-      if (!db.objectStoreNames.contains(CART_STORE)) {
-        db.createObjectStore(CART_STORE, { keyPath: "id" });
       }
     };
     request.onsuccess = (event) => {
@@ -79,60 +69,34 @@ function getAccordionsFromDB() {
   });
 }
 
-function saveCartToDB(cart) {
-  if (!db) return;
-  const tx = db.transaction(CART_STORE, "readwrite");
-  const store = tx.objectStore(CART_STORE);
-  const clearReq = store.clear();
-  clearReq.onsuccess = () => {
-    cart.forEach((c) => store.put(c));
-  };
-}
-
-function getCartFromDB() {
-  return new Promise((resolve) => {
-    if (!db) return resolve([]);
-    const tx = db.transaction(CART_STORE, "readonly");
-    const store = tx.objectStore(CART_STORE);
-    const request = store.getAll();
-    request.onsuccess = () => resolve(request.result || []);
-    request.onerror = () => resolve([]);
-  });
-}
-
-export default () => {
+export default function Masters({ cartAccordions = [], setCartAccordions }) {
   const [accordions, setAccordions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [newOwner, setNewOwner] = useState("");
+
   const [currentId, setCurrentId] = useState(null);
   const [editIndex, setEditIndex] = useState(null);
+
   const [productName, setProductName] = useState("");
   const [productPrice, setProductPrice] = useState("");
   const [productNotes, setProductNotes] = useState("");
+
   const [sending, setSending] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
-  const [cartOpen, setCartOpen] = useState(false);
-  const [cartTab, setCartTab] = useState(0);
-  const [sentAccIds, setSentAccIds] = useState([]);
-  const [cartAccordions, setCartAccordions] = useState([]);
+
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [statusPendingAcc, setStatusPendingAcc] = useState(null);
 
-  // ⬇️ Shu yerga CART'ni yuklash qo'shildi
   useEffect(() => {
     (async () => {
       await openDB();
       const saved = await getAccordionsFromDB();
       const normalized = (saved || []).map((s) => ({
         ...s,
-        status: s.status || null,
+        status: s.status || null, // "paid" | "unpaid" | null (faqat rang ko'rinishi uchun)
       }));
       if (normalized.length > 0) setAccordions(normalized);
-
-      const cartSaved = await getCartFromDB(); // <-- qoʻshildi
-      if (cartSaved.length > 0) setCartAccordions(cartSaved); // <-- qoʻshildi
-
       setLoading(false);
     })();
   }, []);
@@ -140,10 +104,6 @@ export default () => {
   useEffect(() => {
     if (db && !loading) saveAccordionsToDB(accordions);
   }, [accordions, loading]);
-
-  useEffect(() => {
-    if (db) saveCartToDB(cartAccordions);
-  }, [cartAccordions]);
 
   const handleAddAccordion = () => {
     if (newOwner.trim() === "") return;
@@ -154,7 +114,7 @@ export default () => {
       chatId: "",
       notes: "",
       showFullNotes: false,
-      status: null,
+      status: null, // "paid" | "unpaid" | null
     };
     setAccordions((prev) => [...prev, newAcc]);
     setNewOwner("");
@@ -169,6 +129,8 @@ export default () => {
   };
 
   const priceToNumber = (p) => Number(String(p).replace(/[^0-9.-]+/g, "")) || 0;
+  const calculateTotal = (arr) =>
+    arr.reduce((s, p) => s + priceToNumber(p.price), 0);
 
   const handleEditProduct = (accId, idx) => {
     const acc = accordions.find((a) => a.id === accId);
@@ -239,7 +201,6 @@ export default () => {
   const handleDeleteAccordion = (accId) => {
     setAccordions((p) => p.filter((acc) => acc.id !== accId));
     if (expandedId === accId) setExpandedId(null);
-    setSentAccIds((p) => p.filter((id) => id !== accId));
   };
 
   const handleDeleteAllProducts = (accId) => {
@@ -265,13 +226,11 @@ export default () => {
   };
 
   const handleSetStatus = (accId, st) => {
+    // faqat vizual uchun (rang), cartga qo'shish modal orqali bo'ladi
     setAccordions((p) =>
       p.map((acc) => (acc.id === accId ? { ...acc, status: st } : acc))
     );
   };
-
-  const calculateTotal = (arr) =>
-    arr.reduce((s, p) => s + priceToNumber(p.price), 0);
 
   const handleSendToTelegram = async (acc) => {
     if (sending) return;
@@ -295,30 +254,44 @@ export default () => {
       });
       if (!res.ok) throw new Error("Server error");
 
+      // ✅ Yuborilgach modal ochamiz (status tanlash uchun)
       const clone = JSON.parse(JSON.stringify(acc));
       setStatusPendingAcc(clone);
       setStatusModalOpen(true);
-      setSentAccIds((p) => (p.includes(acc.id) ? p : [...p, acc.id]));
-    } catch (e) {
+    } catch (_e) {
       alert("Xatolik yuz berdi!");
     } finally {
       setSending(false);
     }
   };
 
-  const handleSaveStatus = (status) => {
-    const newAcc = {
-      ...statusPendingAcc,
+  const handleSaveStatus = (statusUZ) => {
+    // statusUZ: "to'langan" | "to'lanmagan"  (korzina uchun)
+    // accordion ichidagi rang uchun inglizcha statusni ham qo'yib ketamiz
+    const en = statusUZ === "to'langan" ? "paid" : "unpaid";
+
+    // cartAccordions ga qo'shiladigan obyekt
+    const cartItem = {
       id: Date.now(),
-      status,
+      master: statusPendingAcc.owner,
+      status: statusUZ, // korzina filterlari uchun
+      products: statusPendingAcc.products.map((p) => ({
+        name: p.name,
+        price: p.price,
+      })),
+      notes: statusPendingAcc.notes || "",
       createdAt: new Date().toISOString(),
     };
-    setCartAccordions((p) => [...p, newAcc]);
+
+    setCartAccordions((prev) => [...prev, cartItem]);
+
+    // accordionning o'zida ham statusni ko'rsatib qo'yamiz (rang uchun)
     setAccordions((p) =>
       p.map((acc) =>
-        acc.id === statusPendingAcc.id ? { ...acc, status } : acc
+        acc.id === statusPendingAcc.id ? { ...acc, status: en } : acc
       )
     );
+
     setStatusModalOpen(false);
     setStatusPendingAcc(null);
     setProductName("");
@@ -328,28 +301,8 @@ export default () => {
 
   if (loading) return <Typography>Yuklanmoqda...</Typography>;
 
-  const tolanganlar = cartAccordions.filter((a) => a.status === "paid");
-  const tolanmaganlar = cartAccordions.filter((a) => a.status === "unpaid");
-
   return (
     <div style={{ padding: 20 }} className={styles.container}>
-      {/* NAVBAR with cart badge */}
-      <AppBar position="static" color="primary" sx={{ mb: 2 }}>
-        <Toolbar>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            Mening Accordions
-          </Typography>
-          <IconButton color="inherit" onClick={() => setCartOpen(true)}>
-            <Badge
-              badgeContent={tolanganlar.length + tolanmaganlar.length}
-              color="error"
-            >
-              <ShoppingCartIcon />
-            </Badge>
-          </IconButton>
-        </Toolbar>
-      </AppBar>
-
       <Grid
         container
         spacing={2}
@@ -391,8 +344,6 @@ export default () => {
                   {acc.owner}
                 </Typography>
 
-                {/* NOTE: MoreVertIcon (3 nuqta) olib tashlandi */}
-                {/* Quick delete action kept */}
                 <IconButton
                   onClick={(e) => {
                     e.stopPropagation();
@@ -545,7 +496,6 @@ export default () => {
                   Barchasini o‘chirish
                 </Button>
 
-                {/* show total */}
                 {acc.products.length > 0 && (
                   <Typography
                     variant="subtitle1"
@@ -560,7 +510,7 @@ export default () => {
                           : "inherit",
                     }}
                   >
-                    Umumiy summa: {calculateTotal(acc.products)}
+                    Umumiy summa: {calculateTotal(acc.products)} so'm
                   </Typography>
                 )}
               </AccordionDetails>
@@ -569,6 +519,7 @@ export default () => {
         ))}
       </Grid>
 
+      {/* Yangi accordion qo'shish FAB */}
       <Button
         variant="contained"
         color="primary"
@@ -586,6 +537,7 @@ export default () => {
         <AddIcon />
       </Button>
 
+      {/* Add owner modal */}
       <Dialog open={openModal} onClose={() => setOpenModal(false)}>
         <DialogTitle>Egasining ismini kiriting</DialogTitle>
         <DialogContent>
@@ -605,55 +557,12 @@ export default () => {
         </DialogActions>
       </Dialog>
 
-      {/* Korzina (Drawer) */}
-      <Drawer anchor="right" open={cartOpen} onClose={() => setCartOpen(false)}>
-        <Box sx={{ width: 420, p: 2 }}>
-          <Tabs
-            value={cartTab}
-            onChange={(e, v) => setCartTab(v)}
-            variant="fullWidth"
-          >
-            <Tab label={`To‘langan (${tolanganlar.length})`} />
-            <Tab label={`To‘lanmagan (${tolanmaganlar.length})`} />
-          </Tabs>
-
-          <Box sx={{ mt: 2 }}>
-            {(cartTab === 0 ? tolanganlar : tolanmaganlar).map((acc) => (
-              <Accordion key={acc.id} sx={{ mb: 1 }}>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography sx={{ color: cartTab === 0 ? "green" : "red" }}>
-                    {acc.owner || acc.chatId}
-                  </Typography>
-                </AccordionSummary>
-
-                <AccordionDetails>
-                  <List>
-                    {acc.products.map((p, i) => (
-                      <ListItem key={i} divider>
-                        <ListItemText
-                          primary={p.name}
-                          secondary={`Narxi: ${p.price}`}
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
-                  <Typography fontWeight="bold">
-                    Umumiy summa: {calculateTotal(acc.products)}
-                  </Typography>
-                </AccordionDetails>
-              </Accordion>
-            ))}
-          </Box>
-        </Box>
-      </Drawer>
-
-      {/* STATUS tanlash modali (Telegramga muvaffaqiyatli yuborilgach) */}
+      {/* STATUS tanlash modali (Telegram yuborilgach) */}
       <Dialog open={statusModalOpen} onClose={() => setStatusModalOpen(false)}>
         <DialogTitle>Holatini belgilang</DialogTitle>
         <DialogContent>
           <Typography>
-            Telegramga muvaffaqiyatli yuborildi. Endi bu yozuvni qaysi holatga
-            qo'shasiz?
+            Telegramga yuborildi. Ushbu yozuvni qaysi bo‘limga qo‘shamiz?
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -661,7 +570,7 @@ export default () => {
             variant="contained"
             color="success"
             startIcon={<CheckIcon />}
-            onClick={() => handleSaveStatus("paid")}
+            onClick={() => handleSaveStatus("to'langan")}
           >
             To‘langan
           </Button>
@@ -669,7 +578,7 @@ export default () => {
             variant="contained"
             color="error"
             startIcon={<CancelIcon />}
-            onClick={() => handleSaveStatus("unpaid")}
+            onClick={() => handleSaveStatus("to'lanmagan")}
           >
             To‘lanmagan
           </Button>
@@ -677,4 +586,4 @@ export default () => {
       </Dialog>
     </div>
   );
-};
+}
