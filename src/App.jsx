@@ -9,25 +9,35 @@ import "./App.css";
 import { Button } from "@mui/material";
 
 function App() {
-  // Korzina uchun state (to'langan/to'lanmagan accordionlar)
+  // cartAccordions (to‘langan/to‘lanmagan) — localStorage bilan sinxron
   const [cartAccordions, setCartAccordions] = useState(() => {
-    const saved = localStorage.getItem("cartAccordions");
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem("cartAccordions");
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error("LocalStorage o‘qishda xato:", e);
+      return [];
+    }
   });
 
-  // Login state
+  // Login holati
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     return localStorage.getItem("isLoggedIn") === "true";
   });
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // LocalStorage sync
+  // Har safar cartAccordions o‘zgarsa localStorage ga yozish
   useEffect(() => {
-    localStorage.setItem("cartAccordions", JSON.stringify(cartAccordions));
+    try {
+      localStorage.setItem("cartAccordions", JSON.stringify(cartAccordions));
+    } catch (e) {
+      console.error("LocalStorage yozishda xato:", e);
+    }
   }, [cartAccordions]);
 
-  // Login qilish
+  // Login
   const handleLogin = () => {
     if (email === "Asravto@gmail.com" && password === "asravto") {
       setIsLoggedIn(true);
@@ -43,14 +53,18 @@ function App() {
     localStorage.removeItem("isLoggedIn");
   };
 
-  // Masters -> status tanlangandan keyin korzinaga qo‘shish
+  // Masters page’dan yangi accordion qo‘shish
   const handleAddToCart = (newItem) => {
-    // newItem format:
+    // ✅ format:
     // { id, master, chatId, products: [{name, price, note}], notes, status: "to'langan" | "to'lanmagan" }
-    setCartAccordions((prev) => [...prev, newItem]);
+    setCartAccordions((prev) => {
+      const updated = [...prev, newItem];
+      localStorage.setItem("cartAccordions", JSON.stringify(updated)); // xavfsizlik uchun
+      return updated;
+    });
   };
 
-  // Login page
+  // Login sahifasi
   if (!isLoggedIn) {
     return (
       <div
