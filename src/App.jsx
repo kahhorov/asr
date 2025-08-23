@@ -11,14 +11,8 @@ import { Button } from "@mui/material";
 function App() {
   // cartAccordions (to‘langan/to‘lanmagan) — localStorage bilan sinxron
   const [cartAccordions, setCartAccordions] = useState(() => {
-    try {
-      const saved = localStorage.getItem("cartAccordions");
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      console.error("LocalStorage o‘qishda xato:", e);
-
-      return [];
-    }
+    const saved = localStorage.getItem("cartAccordions");
+    return saved ? JSON.parse(saved) : [];
   });
 
   // Login holati
@@ -56,11 +50,9 @@ function App() {
 
   // Masters page’dan yangi accordion qo‘shish
   const handleAddToCart = (newItem) => {
-    // ✅ format:
-    // { id, master, chatId, products: [{name, price, note}], notes, status: "to'langan" | "to'lanmagan" }
     setCartAccordions((prev) => {
       const updated = [...prev, newItem];
-      localStorage.setItem("cartAccordions", JSON.stringify(updated)); // xavfsizlik uchun
+      localStorage.setItem("cartAccordions", JSON.stringify(updated));
       return updated;
     });
   };
@@ -116,7 +108,7 @@ function App() {
         onLogout={handleLogout}
       />
       <Routes>
-        <Route path="/" element={<Main />} />
+        <Route path="/" element={<Main cartAccordions={cartAccordions} />} />
         <Route
           path="/masters"
           element={
