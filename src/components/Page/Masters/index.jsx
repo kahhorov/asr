@@ -40,7 +40,7 @@ function Masters({ handleAddToCart, cartAccordions }) {
   }, [accordions]);
 
   useEffect(() => {
-    console.log("Main sahifaga kelgan cartAccordions =", cartAccordions);
+    console.log("Masters sahifaga kelgan cartAccordions =", cartAccordions);
   }, [cartAccordions]);
 
   // Usta qo‘shish modal
