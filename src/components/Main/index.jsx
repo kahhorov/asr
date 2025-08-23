@@ -3,7 +3,7 @@ import Masters from "../Page/Masters";
 
 export default ({ cartAccordions }) => {
   useEffect(() => {
-    console.log("Main sahifaga kelgan cartAccordions =", cartAccordions);
+    console.log("Main  kelgan cartAccordions =", cartAccordions);
   }, [cartAccordions]);
   return (
     <div>
