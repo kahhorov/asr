@@ -119,12 +119,7 @@ function App() {
         <Route path="/" element={<Main />} />
         <Route
           path="/masters"
-          element={
-            <Masters
-              cartAccordions={cartAccordions}
-              handleAddToCart={handleAddToCart}
-            />
-          }
+          element={<Masters handleAddToCart={handleAddToCart} />}
         />
         <Route path="/clients" element={<Clients />} />
         <Route path="/debtors" element={<Debtors />} />
