@@ -24,7 +24,11 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SaveIcon from "@mui/icons-material/Save";
 
-function Masters({ handleAddToCart }) {
+function Masters({ handleAddToCart = () => {} }) {
+  useEffect(() => {
+    console.log("[Masters] handleAddToCart typeof =", typeof handleAddToCart);
+  }, [handleAddToCart]);
+
   const [accordions, setAccordions] = useState(() => {
     const saved = localStorage.getItem("mastersAccordions");
     return saved ? JSON.parse(saved) : [];
@@ -223,7 +227,13 @@ function Masters({ handleAddToCart }) {
   };
 
   const handleStatusSelect = (status) => {
-    if (!statusPendingAcc) return;
+    if (!statusPendingAcc) {
+      console.warn(
+        "[Masters] statusPendingAcc yo‘q, status bosildi lekin pending acc topilmadi"
+      );
+      return;
+    }
+
     const payload = {
       id: Date.now(),
       master: statusPendingAcc.name,
@@ -231,9 +241,21 @@ function Masters({ handleAddToCart }) {
       products: statusPendingAcc.products,
       status,
     };
-    handleAddToCart(payload);
 
-    // ✅ Endi mahsulotlarni shu joyda tozalash
+    if (typeof handleAddToCart !== "function") {
+      console.error(
+        "[Masters] handleAddToCart function emas:",
+        handleAddToCart
+      );
+    } else {
+      try {
+        handleAddToCart(payload);
+      } catch (e) {
+        console.error("[Masters] handleAddToCart chaqiruvida xato:", e);
+      }
+    }
+
+    // (ixtiyoriy) shu yerda mahsulotlarni tozalash — pendingAcc bo‘yicha
     setAccordions((prev) =>
       prev.map((a) =>
         a.id === statusPendingAcc.id ? { ...a, products: [] } : a
