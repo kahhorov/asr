@@ -14,11 +14,15 @@ import {
   Box,
   Divider,
   Stack,
+  IconButton,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import AddIcon from "@mui/icons-material/Add";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import SaveIcon from "@mui/icons-material/Save";
 
 function Masters({ handleAddToCart }) {
   const [accordions, setAccordions] = useState(() => {
@@ -31,21 +35,18 @@ function Masters({ handleAddToCart }) {
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [statusPendingAcc, setStatusPendingAcc] = useState(null);
 
-  // localStorage'dan yuklash
-
-  // localStorage'ga saqlash
+  // localStorage
   useEffect(() => {
     localStorage.setItem("mastersAccordions", JSON.stringify(accordions));
   }, [accordions]);
 
-  // Modal ochish-yopish
+  // Usta qo‘shish modal
   const handleOpen = () => setOpenModal(true);
   const handleClose = () => {
     setNewMaster("");
     setOpenModal(false);
   };
 
-  // Usta qo‘shish
   const addMaster = () => {
     if (!newMaster.trim()) return alert("Ism kiriting!");
     const newAcc = {
@@ -53,43 +54,135 @@ function Masters({ handleAddToCart }) {
       name: newMaster,
       chatId: "",
       products: [],
-      notes: "",
     };
     setAccordions((prev) => [...prev, newAcc]);
     setNewMaster("");
     setOpenModal(false);
   };
 
-  // Mahsulot qo‘shish
-  const addProduct = (id, name, price) => {
+  // Mahsulot qo‘shish (izohni alohida joylaymiz)
+  const addProduct = (id, name, price, note) => {
     if (!name.trim()) return alert("Mahsulot nomini kiriting!");
     if (!String(price).trim()) return alert("Narx kiriting!");
+
     setAccordions((prev) =>
       prev.map((acc) =>
         acc.id === id
           ? {
               ...acc,
-              products: [...acc.products, { name, price }],
+              products: [
+                ...acc.products,
+                {
+                  id: Date.now(),
+                  name,
+                  price,
+                  note: note || "",
+                  isEditing: false,
+                  isNoteEditing: false,
+                  showFullNote: false,
+                },
+              ],
             }
           : acc
       )
     );
 
-    // inputlarni tozalash
     document.getElementById(`name-${id}`).value = "";
     document.getElementById(`price-${id}`).value = "";
+    document.getElementById(`note-${id}`).value = "";
   };
 
-  // Barchasini o‘chirish (products va izoh)
-  const clearProducts = (id) => {
+  const deleteProduct = (accId, productId) => {
     setAccordions((prev) =>
       prev.map((acc) =>
-        acc.id === id ? { ...acc, products: [], notes: "" } : acc
+        acc.id === accId
+          ? {
+              ...acc,
+              products: acc.products.filter((p) => p.id !== productId),
+            }
+          : acc
       )
     );
   };
 
-  // Telegramga yuborish
+  const toggleEdit = (accId, productId) => {
+    setAccordions((prev) =>
+      prev.map((acc) =>
+        acc.id === accId
+          ? {
+              ...acc,
+              products: acc.products.map((p) =>
+                p.id === productId ? { ...p, isEditing: !p.isEditing } : p
+              ),
+            }
+          : acc
+      )
+    );
+  };
+
+  const toggleNoteEdit = (accId, productId) => {
+    setAccordions((prev) =>
+      prev.map((acc) =>
+        acc.id === accId
+          ? {
+              ...acc,
+              products: acc.products.map((p) =>
+                p.id === productId
+                  ? { ...p, isNoteEditing: !p.isNoteEditing }
+                  : p
+              ),
+            }
+          : acc
+      )
+    );
+  };
+
+  const deleteNote = (accId, productId) => {
+    setAccordions((prev) =>
+      prev.map((acc) =>
+        acc.id === accId
+          ? {
+              ...acc,
+              products: acc.products.map((p) =>
+                p.id === productId ? { ...p, note: "" } : p
+              ),
+            }
+          : acc
+      )
+    );
+  };
+
+  const toggleShowNote = (accId, productId) => {
+    setAccordions((prev) =>
+      prev.map((acc) =>
+        acc.id === accId
+          ? {
+              ...acc,
+              products: acc.products.map((p) =>
+                p.id === productId ? { ...p, showFullNote: !p.showFullNote } : p
+              ),
+            }
+          : acc
+      )
+    );
+  };
+
+  const updateProduct = (accId, productId, field, value) => {
+    setAccordions((prev) =>
+      prev.map((acc) =>
+        acc.id === accId
+          ? {
+              ...acc,
+              products: acc.products.map((p) =>
+                p.id === productId ? { ...p, [field]: value } : p
+              ),
+            }
+          : acc
+      )
+    );
+  };
+
+  // Telegram
   const handleSendToTelegram = async (acc) => {
     if (sending) return;
     setSending(true);
@@ -98,12 +191,14 @@ function Masters({ handleAddToCart }) {
       if (acc.products.length === 0)
         return alert("Hech qanday mahsulot qo‘shilmagan!");
 
-      let msg = "";
-      if (acc.products.length)
-        msg += acc.products
-          .map((p, i) => `${i + 1}. ${p.name}\nNarxi: ${p.price}.000`)
-          .join("\n\n");
-      if (acc.notes?.trim()) msg += "\n\nIzoh:\n" + acc.notes.trim();
+      let msg = acc.products
+        .map(
+          (p, i) =>
+            `${i + 1}. ${p.name}\nNarxi: ${p.price}.000${
+              p.note ? `\nIzoh: ${p.note}` : ""
+            }`
+        )
+        .join("\n\n");
 
       const res = await fetch("https://server-srsc.onrender.com/sendMessage", {
         method: "POST",
@@ -112,10 +207,12 @@ function Masters({ handleAddToCart }) {
       });
       if (!res.ok) throw new Error("Server error");
 
-      // Yuborilgandan keyin status modali
-      const clone = JSON.parse(JSON.stringify(acc));
-      setStatusPendingAcc(clone);
+      setStatusPendingAcc(JSON.parse(JSON.stringify(acc)));
       setStatusModalOpen(true);
+
+      setAccordions((prev) =>
+        prev.map((a) => (a.id === acc.id ? { ...a, products: [] } : a))
+      );
     } catch (_e) {
       alert("Xatolik yuz berdi!");
     } finally {
@@ -123,7 +220,6 @@ function Masters({ handleAddToCart }) {
     }
   };
 
-  // Holat tanlash → App.js dagi cartAccordions ga qo‘shish
   const handleStatusSelect = (status) => {
     if (!statusPendingAcc) return;
     const payload = {
@@ -131,7 +227,6 @@ function Masters({ handleAddToCart }) {
       master: statusPendingAcc.name,
       chatId: statusPendingAcc.chatId,
       products: statusPendingAcc.products,
-      notes: statusPendingAcc.notes,
       status,
     };
     handleAddToCart(payload);
@@ -141,14 +236,12 @@ function Masters({ handleAddToCart }) {
 
   return (
     <Box p={2}>
-      {/* Ustalar accordionlari */}
       {accordions.map((acc) => (
         <Accordion key={acc.id}>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             <Typography sx={{ fontWeight: 600 }}>{acc.name}</Typography>
           </AccordionSummary>
           <AccordionDetails>
-            {/* Chat ID */}
             <TextField
               fullWidth
               label="Telegram username yoki Chat ID"
@@ -163,12 +256,118 @@ function Masters({ handleAddToCart }) {
               sx={{ mb: 2 }}
             />
 
-            {/* Mahsulotlar ro‘yxati */}
-            {acc.products.map((p, i) => (
-              <Box key={i} mb={1}>
-                <Typography>
-                  {i + 1}. {p.name} — {p.price}.000 so‘m
-                </Typography>
+            {acc.products.map((p) => (
+              <Box key={p.id} mb={2}>
+                {/* Mahsulot */}
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="space-between"
+                >
+                  {p.isEditing ? (
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <TextField
+                        size="small"
+                        value={p.name}
+                        onChange={(e) =>
+                          updateProduct(acc.id, p.id, "name", e.target.value)
+                        }
+                      />
+                      <TextField
+                        size="small"
+                        type="number"
+                        value={p.price}
+                        onChange={(e) =>
+                          updateProduct(acc.id, p.id, "price", e.target.value)
+                        }
+                      />
+                      <IconButton
+                        size="small"
+                        color="success"
+                        onClick={() => toggleEdit(acc.id, p.id)}
+                      >
+                        <SaveIcon fontSize="small" />
+                      </IconButton>
+                    </Stack>
+                  ) : (
+                    <>
+                      <Typography>
+                        {p.name} — {p.price}.000 so‘m
+                      </Typography>
+                      <Box>
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={() => toggleEdit(acc.id, p.id)}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => deleteProduct(acc.id, p.id)}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    </>
+                  )}
+                </Box>
+
+                {/* Izoh */}
+                {p.note && !p.isNoteEditing && (
+                  <Box ml={2} mt={1} display="flex" alignItems="center">
+                    <Typography variant="body2" sx={{ flex: 1 }}>
+                      Izoh:{" "}
+                      {p.showFullNote
+                        ? p.note
+                        : p.note.split(" ").slice(0, 2).join(" ") +
+                          (p.note.split(" ").length > 2 ? " ..." : "")}
+                    </Typography>
+                    {p.note.split(" ").length > 2 && (
+                      <Button
+                        size="small"
+                        onClick={() => toggleShowNote(acc.id, p.id)}
+                      >
+                        {p.showFullNote ? "Yopish" : "Ko‘proq"}
+                      </Button>
+                    )}
+                    <IconButton
+                      size="small"
+                      color="primary"
+                      onClick={() => toggleNoteEdit(acc.id, p.id)}
+                    >
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => deleteNote(acc.id, p.id)}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                )}
+
+                {p.isNoteEditing && (
+                  <Stack direction="row" spacing={1} mt={1} ml={2}>
+                    <TextField
+                      size="small"
+                      fullWidth
+                      value={p.note}
+                      onChange={(e) =>
+                        updateProduct(acc.id, p.id, "note", e.target.value)
+                      }
+                    />
+                    <IconButton
+                      size="small"
+                      color="success"
+                      onClick={() => toggleNoteEdit(acc.id, p.id)}
+                    >
+                      <SaveIcon fontSize="small" />
+                    </IconButton>
+                  </Stack>
+                )}
               </Box>
             ))}
 
@@ -190,20 +389,10 @@ function Masters({ handleAddToCart }) {
                 size="small"
                 type="number"
               />
-
-              {/* Umumiy izoh */}
               <TextField
-                fullWidth
-                label="Umumiy izoh (ixtiyoriy)"
-                value={acc.notes}
-                onChange={(e) =>
-                  setAccordions((prev) =>
-                    prev.map((a) =>
-                      a.id === acc.id ? { ...a, notes: e.target.value } : a
-                    )
-                  )
-                }
-                sx={{ mb: 2 }}
+                label="Izoh (ixtiyoriy)"
+                id={`note-${acc.id}`}
+                size="small"
               />
               <Button
                 variant="contained"
@@ -211,7 +400,8 @@ function Masters({ handleAddToCart }) {
                   addProduct(
                     acc.id,
                     document.getElementById(`name-${acc.id}`).value,
-                    document.getElementById(`price-${acc.id}`).value
+                    document.getElementById(`price-${acc.id}`).value,
+                    document.getElementById(`note-${acc.id}`).value
                   )
                 }
               >
@@ -219,30 +409,21 @@ function Masters({ handleAddToCart }) {
               </Button>
             </Stack>
 
-            {/* Tugmalar */}
             <Divider sx={{ my: 2 }} />
             <Button
               fullWidth
-              variant="contained"
-              sx={{ mb: 1 }}
+              variant="outlined"
+              sx={{ mb: 1, color: "green", borderColor: "green" }}
               onClick={() => handleSendToTelegram(acc)}
               disabled={sending}
             >
               {sending ? "Yuborilmoqda..." : "Telegramga yuborish"}
             </Button>
-            <Button
-              fullWidth
-              color="error"
-              variant="outlined"
-              onClick={() => clearProducts(acc.id)}
-            >
-              Barchasini o‘chirish
-            </Button>
           </AccordionDetails>
         </Accordion>
       ))}
 
-      {/* Floating Action Button */}
+      {/* Floating add button */}
       <Fab
         color="primary"
         onClick={handleOpen}
@@ -251,7 +432,7 @@ function Masters({ handleAddToCart }) {
         <AddIcon />
       </Fab>
 
-      {/* Usta qo‘shish modali */}
+      {/* Usta qo‘shish modal */}
       <Dialog open={openModal} onClose={handleClose}>
         <DialogTitle>Usta ismini kiriting</DialogTitle>
         <DialogContent>
@@ -270,7 +451,7 @@ function Masters({ handleAddToCart }) {
         </DialogActions>
       </Dialog>
 
-      {/* Holatni tanlash modali */}
+      {/* Holat modali */}
       <Dialog open={statusModalOpen} onClose={() => setStatusModalOpen(false)}>
         <DialogTitle>Holatini belgilang</DialogTitle>
         <DialogContent>
