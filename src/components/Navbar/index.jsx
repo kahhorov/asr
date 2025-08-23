@@ -29,9 +29,19 @@ import {
 } from "@mui/icons-material";
 import { IoMdClose } from "react-icons/io";
 import { Link, useLocation } from "react-router-dom";
-import siteLogo from "../../Images/siteLogo.png";
-import styles from "./style.module.css";
-import { MdDeleteForever } from "react-icons/md";
+
+// Agar sizda rasm va css bo'lmasa, quyidagini vaqtincha komment qiling yoki moslashtiring
+// import siteLogo from "../../Images/siteLogo.png";
+// import styles from "./style.module.css";
+const styles = {
+  container: { maxWidth: 1280, margin: "0 auto", width: "100%" },
+  desktopNav: { display: "none" },
+  mobileNav: { display: "none" },
+  siteLogo: { display: "inline-block" },
+  Btn: {},
+  navLink: {},
+  mobileLogoWrapper: {},
+};
 
 function a11yProps(index) {
   return {
@@ -44,7 +54,7 @@ const priceToNumber = (p) => Number(String(p).replace(/[^0-9.-]+/g, "")) || 0;
 const sumProducts = (products = []) =>
   products.reduce((s, p) => s + priceToNumber(p.price), 0);
 
-const Navbar = ({ cartAccordions = [], setCartAccordions }) => {
+const Navbar = ({ cartAccordions, setCartAccordions, onLogout }) => {
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -74,10 +84,7 @@ const Navbar = ({ cartAccordions = [], setCartAccordions }) => {
   // o‘chirish
   const deleteAccordion = (id) => {
     setCartAccordions((prev) => prev.filter((c) => c.id !== id));
-    if (expandedId === id) setExpandedId(false); // o'chirilgan ochiq bo'lsa yopilsin
   };
-
-  // statusni o‘zgartirish
   const changeStatus = (id, newStatus) => {
     setCartAccordions((prev) =>
       prev.map((c) => (c.id === id ? { ...c, status: newStatus } : c))
@@ -162,8 +169,7 @@ const Navbar = ({ cartAccordions = [], setCartAccordions }) => {
               handleMenuClose();
             }}
           >
-            <MdDeleteForever />
-            O‘chirish
+            🗑️ O‘chirish
           </MenuItem>
           <MenuItem
             disabled={selectedItem?.status === "to'langan"}
@@ -204,10 +210,13 @@ const Navbar = ({ cartAccordions = [], setCartAccordions }) => {
         color="default"
         sx={{ boxShadow: 2, width: "100%" }}
       >
-        <Toolbar className={styles.container}>
+        <Toolbar sx={styles.container}>
           {/* LOGO */}
-          <Link to="/" className={styles.siteLogo}>
-            <img src={siteLogo} alt="site logo" width={120} />
+          <Link to="/" style={styles.siteLogo}>
+            {/* <img src={siteLogo} alt="site logo" width={120} /> */}
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              ASR AVTO
+            </Typography>
           </Link>
 
           {/* DESKTOP NAV */}
@@ -215,7 +224,8 @@ const Navbar = ({ cartAccordions = [], setCartAccordions }) => {
           <Tabs
             value={desktopTabValue}
             aria-label="nav tabs"
-            className={styles.desktopNav}
+            // className={styles.desktopNav}
+            sx={{ display: { md: "flex", xs: "none" } }}
           >
             <Tab label="Ustalar" component={Link} to="/masters" />
             <Tab label="Klientlar" component={Link} to="/clients" />
@@ -223,6 +233,10 @@ const Navbar = ({ cartAccordions = [], setCartAccordions }) => {
           </Tabs>
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Button color="inherit" onClick={onLogout}>
+              Logout
+            </Button>
+
             {/* CART ICON */}
             <IconButton color="primary" onClick={toggleDrawer}>
               <Badge badgeContent={cartAccordions.length} color="error">
@@ -233,7 +247,7 @@ const Navbar = ({ cartAccordions = [], setCartAccordions }) => {
             {/* MOBILE MENU BTN */}
             <IconButton
               onClick={toggleMenu}
-              className={styles.Btn}
+              // className={styles.Btn}
               sx={{ display: { xs: "inline-flex", md: "none" } }}
             >
               {menuOpen ? <Close /> : <MenuIcon />}
@@ -244,10 +258,25 @@ const Navbar = ({ cartAccordions = [], setCartAccordions }) => {
 
       {/* MOBILE NAV */}
       {menuOpen && (
-        <Box className={styles.mobileNav}>
-          <div className={styles.mobileLogoWrapper}>
-            <Link to={"/"} className={styles.navLink}>
-              <img src={siteLogo} alt="" width={130} />
+        <Box
+          // className={styles.mobileNav}
+          sx={{
+            display: { xs: "block", md: "none" },
+            borderBottom: "1px solid #eee",
+            p: 2,
+          }}
+        >
+          <div
+            // className={styles.mobileLogoWrapper}
+            style={{ display: "flex", alignItems: "center", gap: 12 }}
+          >
+            <Link
+              to={"/"} // className={styles.navLink}
+              onClick={CloseMenu}
+            >
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                ASR AVTO
+              </Typography>
             </Link>
             <Button sx={{ fontSize: "30px" }} onClick={CloseMenu}>
               <IoMdClose />
@@ -258,18 +287,19 @@ const Navbar = ({ cartAccordions = [], setCartAccordions }) => {
               display: "flex",
               justifyContent: "center",
               flexDirection: "column",
-              gap: "30px",
+              gap: "16px",
               textAlign: "start",
-              paddingLeft: "20px",
+              paddingLeft: "8px",
+              mt: 1,
             }}
           >
-            <Link to="/masters" className={styles.navLink} onClick={toggleMenu}>
+            <Link to="/masters" onClick={toggleMenu}>
               Ustalar
             </Link>
-            <Link to="/clients" className={styles.navLink} onClick={toggleMenu}>
+            <Link to="/clients" onClick={toggleMenu}>
               Klientlar
             </Link>
-            <Link to="/debtors" className={styles.navLink} onClick={toggleMenu}>
+            <Link to="/debtors" onClick={toggleMenu}>
               Qarizlar
             </Link>
           </List>
@@ -292,10 +322,17 @@ const Navbar = ({ cartAccordions = [], setCartAccordions }) => {
             sx={{ borderBottom: 1, borderColor: "divider" }}
           >
             <Tab
-              label={`❌ To‘lanmagan (${unpaid.length})`}
+              label={`❌ To‘lanmagan (${
+                cartAccordions.filter((c) => c.status === "to'lanmagan").length
+              })`}
               {...a11yProps(0)}
             />
-            <Tab label={`✅ To‘langan (${paid.length})`} {...a11yProps(1)} />
+            <Tab
+              label={`✅ To‘langan (${
+                cartAccordions.filter((c) => c.status === "to'langan").length
+              })`}
+              {...a11yProps(1)}
+            />
           </Tabs>
 
           <Box
@@ -305,7 +342,10 @@ const Navbar = ({ cartAccordions = [], setCartAccordions }) => {
             aria-labelledby="cart-tab-0"
             sx={{ p: 2 }}
           >
-            <AccordionList data={unpaid} color="red" />
+            <AccordionList
+              data={cartAccordions.filter((c) => c.status === "to'lanmagan")}
+              color="red"
+            />
           </Box>
           <Box
             role="tabpanel"
@@ -314,7 +354,10 @@ const Navbar = ({ cartAccordions = [], setCartAccordions }) => {
             aria-labelledby="cart-tab-1"
             sx={{ p: 2 }}
           >
-            <AccordionList data={paid} color="green" />
+            <AccordionList
+              data={cartAccordions.filter((c) => c.status === "to'langan")}
+              color="green"
+            />
           </Box>
         </Box>
       </Drawer>

@@ -9,20 +9,20 @@ import "./App.css";
 import { Button } from "@mui/material";
 
 function App() {
-  // Savdo va accordionlar uchun state
+  // Korzina uchun state (to'langan/to'lanmagan accordionlar)
   const [cartAccordions, setCartAccordions] = useState(() => {
     const saved = localStorage.getItem("cartAccordions");
     return saved ? JSON.parse(saved) : [];
   });
 
-  // Login uchun state
+  // Login state
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     return localStorage.getItem("isLoggedIn") === "true";
   });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // Har safar cartAccordions o‘zgarsa localStorage ga saqlash
+  // LocalStorage sync
   useEffect(() => {
     localStorage.setItem("cartAccordions", JSON.stringify(cartAccordions));
   }, [cartAccordions]);
@@ -37,18 +37,20 @@ function App() {
     }
   };
 
-  // Logout qilish
+  // Logout
   const handleLogout = () => {
     setIsLoggedIn(false);
     localStorage.removeItem("isLoggedIn");
   };
 
-  // Savatga qo‘shish
+  // Masters -> status tanlangandan keyin korzinaga qo‘shish
   const handleAddToCart = (newItem) => {
+    // newItem format:
+    // { id, master, chatId, products: [{name, price, note}], notes, status: "to'langan" | "to'lanmagan" }
     setCartAccordions((prev) => [...prev, newItem]);
   };
 
-  // Agar login qilmagan bo‘lsa faqat login sahifa chiqsin
+  // Login page
   if (!isLoggedIn) {
     return (
       <div
@@ -70,14 +72,14 @@ function App() {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          style={{ width: "20%", padding: "15px", margin: "10px 0" }}
+          style={{ width: "200px", padding: "15px", margin: "10px 0" }}
         />
         <input
           type="password"
           placeholder="Parol"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          style={{ width: "20%", padding: "15px", margin: "10px 0" }}
+          style={{ width: "200px", padding: "15px", margin: "10px 0" }}
         />
         <Button
           variant="outlined"
@@ -90,12 +92,12 @@ function App() {
     );
   }
 
-  // Agar login bo‘lsa barcha komponentlar chiqadi
+  // Asosiy App
   return (
     <div>
       <Navbar
         cartAccordions={cartAccordions}
-        setCartAccordions={setCartAccordions} // 🔥 qo‘shildi
+        setCartAccordions={setCartAccordions}
         onLogout={handleLogout}
       />
       <Routes>
@@ -105,31 +107,12 @@ function App() {
           element={
             <Masters
               cartAccordions={cartAccordions}
-              setCartAccordions={setCartAccordions}
               handleAddToCart={handleAddToCart}
             />
           }
         />
-        <Route
-          path="/clients"
-          element={
-            <Clients
-              cartAccordions={cartAccordions}
-              setCartAccordions={setCartAccordions}
-              handleAddToCart={handleAddToCart}
-            />
-          }
-        />
-        <Route
-          path="/debtors"
-          element={
-            <Debtors
-              cartAccordions={cartAccordions}
-              setCartAccordions={setCartAccordions}
-              handleAddToCart={handleAddToCart}
-            />
-          }
-        />
+        <Route path="/clients" element={<Clients />} />
+        <Route path="/debtors" element={<Debtors />} />
       </Routes>
     </div>
   );
