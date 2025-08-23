@@ -207,12 +207,14 @@ function Masters({ handleAddToCart }) {
       });
       if (!res.ok) throw new Error("Server error");
 
+      // ✅ Avval statusPendingAcc to‘ldiriladi
       setStatusPendingAcc(JSON.parse(JSON.stringify(acc)));
       setStatusModalOpen(true);
 
-      setAccordions((prev) =>
-        prev.map((a) => (a.id === acc.id ? { ...a, products: [] } : a))
-      );
+      // ❌ Bu qatorni keyinga qoldirish kerak
+      // setAccordions((prev) =>
+      //   prev.map((a) => (a.id === acc.id ? { ...a, products: [] } : a))
+      // );
     } catch (_e) {
       alert("Xatolik yuz berdi!");
     } finally {
@@ -230,6 +232,14 @@ function Masters({ handleAddToCart }) {
       status,
     };
     handleAddToCart(payload);
+
+    // ✅ Endi mahsulotlarni shu joyda tozalash
+    setAccordions((prev) =>
+      prev.map((a) =>
+        a.id === statusPendingAcc.id ? { ...a, products: [] } : a
+      )
+    );
+
     setStatusModalOpen(false);
     setStatusPendingAcc(null);
   };
