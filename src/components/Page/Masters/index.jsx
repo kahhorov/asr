@@ -23,13 +23,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SaveIcon from "@mui/icons-material/Save";
-function Masters(props) {
-  const { handleAddToCart } = props;
-
-  useEffect(() => {
-    console.log("[Masters] handleAddToCart typeof =", typeof handleAddToCart);
-  }, [handleAddToCart]);
-
+function Masters({ handleAddToCart, cartAccordions }) {
   const [accordions, setAccordions] = useState(() => {
     const saved = localStorage.getItem("mastersAccordions");
     return saved ? JSON.parse(saved) : [];
@@ -44,6 +38,10 @@ function Masters(props) {
   useEffect(() => {
     localStorage.setItem("mastersAccordions", JSON.stringify(accordions));
   }, [accordions]);
+
+  useEffect(() => {
+    console.log("Main sahifaga kelgan cartAccordions =", cartAccordions);
+  }, [cartAccordions]);
 
   // Usta qo‘shish modal
   const handleOpen = () => setOpenModal(true);
