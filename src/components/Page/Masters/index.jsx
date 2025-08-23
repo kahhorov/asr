@@ -23,8 +23,9 @@ import CloseIcon from "@mui/icons-material/Close";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SaveIcon from "@mui/icons-material/Save";
+function Masters(props) {
+  const { handleAddToCart } = props;
 
-function Masters({ handleAddToCart = () => {} }) {
   useEffect(() => {
     console.log("[Masters] handleAddToCart typeof =", typeof handleAddToCart);
   }, [handleAddToCart]);
@@ -251,7 +252,7 @@ function Masters({ handleAddToCart = () => {} }) {
       try {
         handleAddToCart(payload);
       } catch (e) {
-        console.error("[Masters] handleAddToCart chaqiruvida xato:", e);
+        console.log("[Masters] handleAddToCart =", handleAddToCart);
       }
     }
 
