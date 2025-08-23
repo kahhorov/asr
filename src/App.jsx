@@ -16,6 +16,7 @@ function App() {
       return saved ? JSON.parse(saved) : [];
     } catch (e) {
       console.error("LocalStorage o‘qishda xato:", e);
+      alert("error");
       return [];
     }
   });
