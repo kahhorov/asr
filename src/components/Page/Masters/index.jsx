@@ -36,6 +36,7 @@ function Masters({ handleAddToCart, cartAccordions }) {
   const [sending, setSending] = useState(false);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [statusPendingAcc, setStatusPendingAcc] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
 
   // 🔹 LocalStorage update
   useEffect(() => {
@@ -260,14 +261,28 @@ function Masters({ handleAddToCart, cartAccordions }) {
   return (
     <Box p={2}>
       {accordions.map((acc) => (
-        <Accordion key={acc.id}>
+        <Accordion
+          key={acc.id}
+          expanded={expandedId === acc.id}
+          onChange={() => setExpandedId(expandedId === acc.id ? null : acc.id)}
+        >
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography sx={{ fontWeight: 600 }}>{acc.name}</Typography>
+            <Typography
+              sx={{
+                fontWeight: 600,
+              }}
+            >
+              {acc.name}
+            </Typography>
             <IconButton
               size="small"
               color="error"
               onClick={() => deleteMaster(acc.id)}
-              sx={{ ml: 2 }}
+              sx={{
+                position: "absolute",
+                right: "50px",
+                top: "5px",
+              }}
             >
               <DeleteIcon />
             </IconButton>
