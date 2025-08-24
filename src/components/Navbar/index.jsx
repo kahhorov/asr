@@ -59,6 +59,7 @@ const Navbar = ({ cartAccordions, setCartAccordions }) => {
     if (location.pathname.startsWith("/masters")) return 0;
     if (location.pathname.startsWith("/clients")) return 1;
     if (location.pathname.startsWith("/debtors")) return 2;
+    if (location.pathname.startsWith("/balanis")) return 3;
     return false;
   }, [location.pathname]);
 
@@ -316,7 +317,11 @@ const Navbar = ({ cartAccordions, setCartAccordions }) => {
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <IconButton color="primary" onClick={toggleDrawer}>
-              <Badge badgeContent={cartAccordions.length} color="error">
+              <Badge
+                badgeContent={cartAccordions.length}
+                color="error"
+                invisible={cartAccordions.length === 0} // <- bu satr qo‘shildi
+              >
                 <LuShoppingCart />
               </Badge>
             </IconButton>
@@ -341,12 +346,7 @@ const Navbar = ({ cartAccordions, setCartAccordions }) => {
       >
         <Box sx={{ width: 250 }}>
           <List>
-            <ListItem
-              button
-              component={Link}
-              to="/masters"
-              onClick={toggleMobileMenu}
-            >
+            <ListItem button component={Link} to="/" onClick={toggleMobileMenu}>
               <ListItemText primary="Ustalar" />
             </ListItem>
             <ListItem
@@ -364,6 +364,14 @@ const Navbar = ({ cartAccordions, setCartAccordions }) => {
               onClick={toggleMobileMenu}
             >
               <ListItemText primary="Qarzdorlar" />
+            </ListItem>
+            <ListItem
+              button
+              component={Link}
+              to="/balanis"
+              onClick={toggleMobileMenu}
+            >
+              <ListItemText primary="Balance" />
             </ListItem>
           </List>
         </Box>

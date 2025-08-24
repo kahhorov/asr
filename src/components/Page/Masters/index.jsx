@@ -223,24 +223,36 @@ function Masters({ handleAddToCart, cartAccordions }) {
   const handleStatusSelect = (status) => {
     if (!statusPendingAcc) return;
 
+    // Yozuv uchun jami narxni hisoblash
+    const totalPrice = statusPendingAcc.products.reduce(
+      (sum, p) => sum + Number(p.price || 0),
+      0
+    );
+
+    // App.js dagi cartAccordions ga qo‘shiladigan payload
     const payload = {
       id: Date.now(),
       master: statusPendingAcc.name,
       chatId: statusPendingAcc.chatId,
       products: statusPendingAcc.products,
-      status,
+      status, // "to'langan" yoki "to'lanmagan"
+      price: totalPrice, // jami narx
+      createdAt: new Date().toISOString(),
     };
 
+    // handleAddToCart chaqirish
     if (typeof handleAddToCart === "function") {
       handleAddToCart(payload);
     }
 
+    // Mastersdagi accordion products ni tozalash
     setAccordions((prev) =>
       prev.map((a) =>
         a.id === statusPendingAcc.id ? { ...a, products: [] } : a
       )
     );
 
+    // Modalni yopish va statusPendingAcc ni tozalash
     setStatusModalOpen(false);
     setStatusPendingAcc(null);
   };

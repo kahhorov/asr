@@ -56,8 +56,12 @@ function App() {
       ...prev,
       {
         ...newItem,
-        createdAt: new Date().toISOString(), // vaqtini qo‘shamiz
-        status: newItem.status || "kutilmoqda", // ✅ agar Masters’dan kelgan status bo‘lsa, o‘sha yoziladi
+        createdAt: new Date().toISOString(),
+        status: newItem.status || "to'lanmagan",
+        price: newItem.products.reduce(
+          (sum, p) => sum + Number(p.price || 0),
+          0
+        ),
       },
     ]);
   };
