@@ -19,6 +19,7 @@ import {
   Button,
   Menu,
   MenuItem,
+  Checkbox,
 } from "@mui/material";
 import {
   ShoppingCart,
@@ -27,20 +28,13 @@ import {
   ExpandMore,
   MoreVert,
 } from "@mui/icons-material";
-import { IoMdClose } from "react-icons/io";
 import { Link, useLocation } from "react-router-dom";
+import siteLogo from "../../Images/siteLogo.png";
+import { LuShoppingCart } from "react-icons/lu";
 
-// Agar sizda rasm va css bo'lmasa, quyidagini vaqtincha komment qiling yoki moslashtiring
-// import siteLogo from "../../Images/siteLogo.png";
-// import styles from "./style.module.css";
 const styles = {
   container: { maxWidth: 1280, margin: "0 auto", width: "100%" },
-  desktopNav: { display: "none" },
-  mobileNav: { display: "none" },
   siteLogo: { display: "inline-block" },
-  Btn: {},
-  navLink: {},
-  mobileLogoWrapper: {},
 };
 
 function a11yProps(index) {
@@ -54,16 +48,13 @@ const priceToNumber = (p) => Number(String(p).replace(/[^0-9.-]+/g, "")) || 0;
 const sumProducts = (products = []) =>
   products.reduce((s, p) => s + priceToNumber(p.price), 0);
 
-const Navbar = ({ cartAccordions, setCartAccordions, onLogout }) => {
+const Navbar = ({ cartAccordions, setCartAccordions }) => {
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // mobil menyu
   const [tabValue, setTabValue] = useState(0);
-
-  // accordion control state
   const [expandedId, setExpandedId] = useState(false);
 
-  // route highlight
   const desktopTabValue = useMemo(() => {
     if (location.pathname.startsWith("/masters")) return 0;
     if (location.pathname.startsWith("/clients")) return 1;
@@ -72,24 +63,53 @@ const Navbar = ({ cartAccordions, setCartAccordions, onLogout }) => {
   }, [location.pathname]);
 
   const toggleDrawer = () => setDrawerOpen((p) => !p);
-  const toggleMenu = () => setMenuOpen((p) => !p);
+  const toggleMobileMenu = () => setMobileMenuOpen((p) => !p);
   const handleCartTabChange = (_e, v) => {
     setTabValue(v);
-    setExpandedId(false); // tab o'zgarsa accordion yopilsin
+    setExpandedId(false);
   };
 
-  const paid = cartAccordions.filter((c) => c.status === "to'langan");
-  const unpaid = cartAccordions.filter((c) => c.status === "to'lanmagan");
-
-  // o‘chirish
   const deleteAccordion = (id) => {
     setCartAccordions((prev) => prev.filter((c) => c.id !== id));
   };
+
   const changeStatus = (id, newStatus) => {
     setCartAccordions((prev) =>
       prev.map((c) => (c.id === id ? { ...c, status: newStatus } : c))
     );
   };
+
+  const toggleProductSelected = (accId, index) => {
+    setCartAccordions((prev) =>
+      prev.map((acc) =>
+        acc.id === accId
+          ? {
+              ...acc,
+              products: acc.products.map((p, i) =>
+                i === index ? { ...p, selected: !p.selected } : p
+              ),
+            }
+          : acc
+      )
+    );
+  };
+
+  const confirmPaidProducts = (accId) => {
+    setCartAccordions((prev) =>
+      prev.map((acc) =>
+        acc.id === accId
+          ? {
+              ...acc,
+              products: acc.products.map((p) =>
+                p.selected ? { ...p, paid: true, selected: false } : p
+              ),
+            }
+          : acc
+      )
+    );
+  };
+
+  const checkAllPaid = (acc) => acc.products.every((p) => p.paid);
 
   const AccordionList = ({ data, color }) => {
     const [anchorEl, setAnchorEl] = useState(null);
@@ -104,65 +124,148 @@ const Navbar = ({ cartAccordions, setCartAccordions, onLogout }) => {
       setAnchorEl(null);
       setSelectedId(null);
     };
-
     const selectedItem = data.find((c) => c.id === selectedId);
 
     return (
       <>
-        {data.map((item) => (
-          <Accordion
-            key={item.id}
-            sx={{ mb: 1 }}
-            expanded={expandedId === item.id}
-            onChange={() =>
-              setExpandedId(expandedId === item.id ? false : item.id)
-            }
-          >
-            <AccordionSummary expandIcon={<ExpandMore />}>
-              <Typography sx={{ fontWeight: 700, color, flexGrow: 1 }}>
-                {item.master}
-              </Typography>
-              {/* 3 nuqta menyu */}
-              <IconButton
-                size="small"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleMenuOpen(e, item.id);
-                }}
-              >
-                <MoreVert />
-              </IconButton>
-            </AccordionSummary>
-            <AccordionDetails>
-              <List dense disablePadding>
-                {item.products.map((p, i) => (
-                  <ListItem key={i} disableGutters sx={{ py: 0.2 }}>
-                    <ListItemText
-                      primaryTypographyProps={{ fontSize: 13 }}
-                      secondaryTypographyProps={{ fontSize: 12 }}
-                      primary={p.name}
-                      secondary={`Narxi: ${p.price}`}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-              {item.notes?.trim() ? (
-                <Typography sx={{ mt: 0.5 }} variant="caption">
-                  Izoh: {item.notes}
+        {data.map((item) => {
+          const hasSelected = item.products.some((p) => p.selected);
+          if (checkAllPaid(item) && item.status !== "to'langan") {
+            changeStatus(item.id, "to'langan");
+          }
+
+          return (
+            <Accordion
+              key={item.id}
+              sx={{ mb: 1 }}
+              expanded={expandedId === item.id}
+              onChange={() =>
+                setExpandedId(expandedId === item.id ? false : item.id)
+              }
+            >
+              <AccordionSummary expandIcon={<ExpandMore />}>
+                <Typography sx={{ fontWeight: 700, color, flexGrow: 1 }}>
+                  {item.master}
                 </Typography>
-              ) : null}
-              <Typography sx={{ mt: 0.5, fontWeight: 700 }} variant="body2">
-                Umumiy: {sumProducts(item.products)}.000 so'm
-              </Typography>
-            </AccordionDetails>
-          </Accordion>
-        ))}
-        {/* MENU */}
+
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: "gray",
+                    fontSize: 12,
+                    mr: 1,
+                    whiteSpace: "nowrap",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  {item.createdAt
+                    ? (() => {
+                        const d = new Date(item.createdAt);
+                        const day = String(d.getDate()).padStart(2, "0");
+                        const month = String(d.getMonth() + 1).padStart(2, "0");
+                        const hours = String(d.getHours()).padStart(2, "0");
+                        const minutes = String(d.getMinutes()).padStart(2, "0");
+                        return `${day}/${month} ${hours}:${minutes}`;
+                      })()
+                    : "⏰ sana yo‘q"}
+                </Typography>
+
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleMenuOpen(e, item.id);
+                  }}
+                >
+                  <MoreVert />
+                </IconButton>
+              </AccordionSummary>
+
+              <AccordionDetails>
+                <List dense disablePadding>
+                  {item.products.map((p, i) => (
+                    <ListItem key={i} disableGutters sx={{ py: 0.5 }}>
+                      <Checkbox
+                        checked={!!p.selected}
+                        onChange={() => toggleProductSelected(item.id, i)}
+                        disabled={item.status === "to'langan" || p.paid}
+                      />
+                      <ListItemText
+                        primaryTypographyProps={{
+                          fontSize: 13,
+                          sx: {
+                            color: p.paid ? "green" : "black",
+                            textDecoration: p.paid ? "line-through" : "none",
+                          },
+                        }}
+                        secondaryTypographyProps={{ fontSize: 12 }}
+                        primary={p.name}
+                        secondary={`Narxi: ${p.price}`}
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+
+                {hasSelected && item.status !== "to'langan" && (
+                  <Button
+                    variant="contained"
+                    color="success"
+                    fullWidth
+                    sx={{ mt: 1 }}
+                    onClick={() => confirmPaidProducts(item.id)}
+                  >
+                    ✅ To‘landi deb belgilash
+                  </Button>
+                )}
+
+                <Typography sx={{ mt: 0.5, fontWeight: 700 }} variant="body2">
+                  Umumiy: {sumProducts(item.products.filter((p) => !p.paid))}
+                  .000 so'm
+                </Typography>
+              </AccordionDetails>
+            </Accordion>
+          );
+        })}
+
         <Menu
           anchorEl={anchorEl}
           open={Boolean(anchorEl)}
           onClose={handleMenuClose}
+          PaperProps={{
+            sx: { maxHeight: 200, width: 200 },
+          }}
+          anchorOrigin={{
+            vertical: "bottom",
+            horizontal: "right",
+          }}
+          transformOrigin={{
+            vertical: "top",
+            horizontal: "right",
+          }}
         >
+          {selectedItem && selectedItem.status === "to'langan" && (
+            <MenuItem
+              onClick={() => {
+                changeStatus(selectedId, "to'lanmagan");
+                handleMenuClose();
+              }}
+            >
+              ❌ To‘lanmaganlarga o‘tkazish
+            </MenuItem>
+          )}
+
+          {selectedItem && selectedItem.status === "to'lanmagan" && (
+            <MenuItem
+              onClick={() => {
+                changeStatus(selectedId, "to'langan");
+                handleMenuClose();
+              }}
+            >
+              ✅ To‘langanlarga o‘tkazish
+            </MenuItem>
+          )}
+
           <MenuItem
             onClick={() => {
               deleteAccordion(selectedId);
@@ -170,24 +273,6 @@ const Navbar = ({ cartAccordions, setCartAccordions, onLogout }) => {
             }}
           >
             🗑️ O‘chirish
-          </MenuItem>
-          <MenuItem
-            disabled={selectedItem?.status === "to'langan"}
-            onClick={() => {
-              changeStatus(selectedId, "to'langan");
-              handleMenuClose();
-            }}
-          >
-            ✅ To‘langan
-          </MenuItem>
-          <MenuItem
-            disabled={selectedItem?.status === "to'lanmagan"}
-            onClick={() => {
-              changeStatus(selectedId, "to'lanmagan");
-              handleMenuClose();
-            }}
-          >
-            ❌ To‘lanmagan
           </MenuItem>
         </Menu>
 
@@ -200,8 +285,6 @@ const Navbar = ({ cartAccordions, setCartAccordions, onLogout }) => {
     );
   };
 
-  const CloseMenu = () => setMenuOpen(false);
-
   return (
     <>
       {/* NAVBAR */}
@@ -211,107 +294,87 @@ const Navbar = ({ cartAccordions, setCartAccordions, onLogout }) => {
         sx={{ boxShadow: 2, width: "100%" }}
       >
         <Toolbar sx={styles.container}>
-          {/* LOGO */}
           <Link to="/" style={styles.siteLogo}>
-            {/* <img src={siteLogo} alt="site logo" width={120} /> */}
             <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              ASR AVTO
+              <img src={siteLogo} alt="" width={150} />
             </Typography>
           </Link>
 
-          {/* DESKTOP NAV */}
           <Box sx={{ flex: 1 }} />
+
+          {/* Desktop Tabs */}
           <Tabs
             value={desktopTabValue}
             aria-label="nav tabs"
-            // className={styles.desktopNav}
             sx={{ display: { md: "flex", xs: "none" } }}
           >
-            <Tab label="Ustalar" component={Link} to="/masters" />
+            <Tab label="Ustalar" component={Link} to="/" />
             <Tab label="Klientlar" component={Link} to="/clients" />
-            <Tab label="Qarizlar" component={Link} to="/debtors" />
+            <Tab label="Qarzdorlar" component={Link} to="/debtors" />
+            <Tab label="Balance" component={Link} to="/balanis" />
           </Tabs>
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Button color="inherit" onClick={onLogout}>
-              Logout
-            </Button>
-
-            {/* CART ICON */}
             <IconButton color="primary" onClick={toggleDrawer}>
               <Badge badgeContent={cartAccordions.length} color="error">
-                <ShoppingCart />
+                <LuShoppingCart />
               </Badge>
             </IconButton>
 
-            {/* MOBILE MENU BTN */}
+            {/* Mobil menyu tugma */}
             <IconButton
-              onClick={toggleMenu}
-              // className={styles.Btn}
+              onClick={toggleMobileMenu}
               sx={{ display: { xs: "inline-flex", md: "none" } }}
             >
-              {menuOpen ? <Close /> : <MenuIcon />}
+              {mobileMenuOpen ? <Close /> : <MenuIcon />}
             </IconButton>
           </Box>
         </Toolbar>
       </AppBar>
 
-      {/* MOBILE NAV */}
-      {menuOpen && (
-        <Box
-          // className={styles.mobileNav}
-          sx={{
-            display: { xs: "block", md: "none" },
-            borderBottom: "1px solid #eee",
-            p: 2,
-          }}
-        >
-          <div
-            // className={styles.mobileLogoWrapper}
-            style={{ display: "flex", alignItems: "center", gap: 12 }}
-          >
-            <Link
-              to={"/"} // className={styles.navLink}
-              onClick={CloseMenu}
+      {/* Mobil menyu Drawer */}
+      <Drawer
+        anchor="left"
+        open={mobileMenuOpen}
+        onClose={toggleMobileMenu}
+        sx={{ display: { md: "none", xs: "block" } }}
+      >
+        <Box sx={{ width: 250 }}>
+          <List>
+            <ListItem
+              button
+              component={Link}
+              to="/masters"
+              onClick={toggleMobileMenu}
             >
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                ASR AVTO
-              </Typography>
-            </Link>
-            <Button sx={{ fontSize: "30px" }} onClick={CloseMenu}>
-              <IoMdClose />
-            </Button>
-          </div>
-          <List
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              flexDirection: "column",
-              gap: "16px",
-              textAlign: "start",
-              paddingLeft: "8px",
-              mt: 1,
-            }}
-          >
-            <Link to="/masters" onClick={toggleMenu}>
-              Ustalar
-            </Link>
-            <Link to="/clients" onClick={toggleMenu}>
-              Klientlar
-            </Link>
-            <Link to="/debtors" onClick={toggleMenu}>
-              Qarizlar
-            </Link>
+              <ListItemText primary="Ustalar" />
+            </ListItem>
+            <ListItem
+              button
+              component={Link}
+              to="/clients"
+              onClick={toggleMobileMenu}
+            >
+              <ListItemText primary="Klientlar" />
+            </ListItem>
+            <ListItem
+              button
+              component={Link}
+              to="/debtors"
+              onClick={toggleMobileMenu}
+            >
+              <ListItemText primary="Qarzdorlar" />
+            </ListItem>
           </List>
         </Box>
-      )}
+      </Drawer>
 
       {/* CART DRAWER */}
       <Drawer anchor="right" open={drawerOpen} onClose={toggleDrawer}>
         <Box sx={{ width: { xs: "100%", sm: "360px" } }}>
           <Box sx={{ p: 2 }}>
             <Typography variant="h6" onClick={toggleDrawer}>
-              🛒 Korzina
+              <LuShoppingCart /> Korzina
             </Typography>
           </Box>
           <Divider />
@@ -335,25 +398,13 @@ const Navbar = ({ cartAccordions, setCartAccordions, onLogout }) => {
             />
           </Tabs>
 
-          <Box
-            role="tabpanel"
-            hidden={tabValue !== 0}
-            id="cart-tabpanel-0"
-            aria-labelledby="cart-tab-0"
-            sx={{ p: 2 }}
-          >
+          <Box role="tabpanel" hidden={tabValue !== 0} sx={{ p: 2 }}>
             <AccordionList
               data={cartAccordions.filter((c) => c.status === "to'lanmagan")}
               color="red"
             />
           </Box>
-          <Box
-            role="tabpanel"
-            hidden={tabValue !== 1}
-            id="cart-tabpanel-1"
-            aria-labelledby="cart-tab-1"
-            sx={{ p: 2 }}
-          >
+          <Box role="tabpanel" hidden={tabValue !== 1} sx={{ p: 2 }}>
             <AccordionList
               data={cartAccordions.filter((c) => c.status === "to'langan")}
               color="green"

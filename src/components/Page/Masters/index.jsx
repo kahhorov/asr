@@ -42,12 +42,6 @@ function Masters({ handleAddToCart, cartAccordions }) {
     localStorage.setItem("mastersAccordions", JSON.stringify(accordions));
   }, [accordions]);
 
-  // Debug props
-  useEffect(() => {
-    console.log("🔹 Masters sahifaga kelgan cartAccordions =", cartAccordions);
-    console.log("🔹 handleAddToCart typeof =", typeof handleAddToCart);
-  }, [cartAccordions, handleAddToCart]);
-
   // 🔹 Usta qo‘shish
   const addMaster = () => {
     if (!newMaster.trim()) return alert("Ism kiriting!");
@@ -60,6 +54,12 @@ function Masters({ handleAddToCart, cartAccordions }) {
     setAccordions((prev) => [...prev, newAcc]);
     setNewMaster("");
     setOpenModal(false);
+  };
+
+  // 🔹 Usta o‘chirish
+  const deleteMaster = (id) => {
+    if (!window.confirm("Ustani o‘chirishni tasdiqlaysizmi?")) return;
+    setAccordions((prev) => prev.filter((acc) => acc.id !== id));
   };
 
   // 🔹 Mahsulot qo‘shish
@@ -94,7 +94,7 @@ function Masters({ handleAddToCart, cartAccordions }) {
     document.getElementById(`note-${id}`).value = "";
   };
 
-  // 🔹 Product actions (edit, delete, note)
+  // 🔹 Mahsulot o‘chirish
   const deleteProduct = (accId, productId) => {
     setAccordions((prev) =>
       prev.map((acc) =>
@@ -105,6 +105,7 @@ function Masters({ handleAddToCart, cartAccordions }) {
     );
   };
 
+  // 🔹 Mahsulot tahrirlash
   const toggleEdit = (accId, productId) => {
     setAccordions((prev) =>
       prev.map((acc) =>
@@ -135,6 +136,7 @@ function Masters({ handleAddToCart, cartAccordions }) {
     );
   };
 
+  // 🔹 Izoh bilan ishlash
   const toggleNoteEdit = (accId, productId) => {
     setAccordions((prev) =>
       prev.map((acc) =>
@@ -195,7 +197,7 @@ function Masters({ handleAddToCart, cartAccordions }) {
         .map(
           (p, i) =>
             `${i + 1}. ${p.name}\nNarxi: ${p.price}.000${
-              p.note ? `\nIzoh: ${p.note}` : ""
+              p.note ? `\n\nIzoh: ${p.note}` : ""
             }`
         )
         .join("\n\n");
@@ -208,7 +210,6 @@ function Masters({ handleAddToCart, cartAccordions }) {
 
       if (!res.ok) throw new Error("Server error");
 
-      // ✅ Status modalni ochamiz
       setStatusPendingAcc({ ...acc });
       setStatusModalOpen(true);
     } catch (_e) {
@@ -232,11 +233,8 @@ function Masters({ handleAddToCart, cartAccordions }) {
 
     if (typeof handleAddToCart === "function") {
       handleAddToCart(payload);
-    } else {
-      console.error("handleAddToCart function emas:", handleAddToCart);
     }
 
-    // ustaning mahsulotlarini tozalash
     setAccordions((prev) =>
       prev.map((a) =>
         a.id === statusPendingAcc.id ? { ...a, products: [] } : a
@@ -253,6 +251,14 @@ function Masters({ handleAddToCart, cartAccordions }) {
         <Accordion key={acc.id}>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             <Typography sx={{ fontWeight: 600 }}>{acc.name}</Typography>
+            <IconButton
+              size="small"
+              color="error"
+              onClick={() => deleteMaster(acc.id)}
+              sx={{ ml: 2 }}
+            >
+              <DeleteIcon />
+            </IconButton>
           </AccordionSummary>
           <AccordionDetails>
             <TextField
@@ -272,7 +278,6 @@ function Masters({ handleAddToCart, cartAccordions }) {
             {/* Mahsulotlar */}
             {acc.products.map((p) => (
               <Box key={p.id} mb={2}>
-                {/* Mahsulot */}
                 <Box
                   display="flex"
                   alignItems="center"

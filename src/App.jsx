@@ -7,6 +7,7 @@ import Debtors from "./components/Page/Debtors";
 import Main from "./components/Main";
 import "./App.css";
 import { Button } from "@mui/material";
+import Balanis from "./components/Balanis";
 
 function App() {
   // cartAccordions (to‘langan/to‘lanmagan) — localStorage bilan sinxron
@@ -49,12 +50,16 @@ function App() {
   };
 
   // Masters page’dan yangi accordion qo‘shish
+  // App.js
   const handleAddToCart = (newItem) => {
-    setCartAccordions((prev) => {
-      const updated = [...prev, newItem];
-      localStorage.setItem("cartAccordions", JSON.stringify(updated));
-      return updated;
-    });
+    setCartAccordions((prev) => [
+      ...prev,
+      {
+        ...newItem,
+        createdAt: new Date().toISOString(), // vaqtini qo‘shamiz
+        status: newItem.status || "kutilmoqda", // ✅ agar Masters’dan kelgan status bo‘lsa, o‘sha yoziladi
+      },
+    ]);
   };
 
   // Login sahifasi
@@ -108,11 +113,10 @@ function App() {
         onLogout={handleLogout}
       />
       <Routes>
-        <Route path="/" element={<Main cartAccordions={cartAccordions} />} />
         <Route
-          path="/masters"
+          path="/"
           element={
-            <Masters
+            <Main
               cartAccordions={cartAccordions}
               handleAddToCart={handleAddToCart}
             />
@@ -120,6 +124,10 @@ function App() {
         />
         <Route path="/clients" element={<Clients />} />
         <Route path="/debtors" element={<Debtors />} />
+        <Route
+          path="/balanis"
+          element={<Balanis cartAccordions={cartAccordions} />}
+        />
       </Routes>
     </div>
   );
