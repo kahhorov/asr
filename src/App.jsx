@@ -92,7 +92,7 @@ function App() {
             width: "200px",
             padding: "15px",
             margin: "10px 0",
-            color: "black",
+            color: "#000",
           }}
         />
         <input
@@ -104,7 +104,7 @@ function App() {
             width: "200px",
             padding: "15px",
             margin: "10px 0",
-            color: "black",
+            color: "#000",
           }}
         />
         <Button
