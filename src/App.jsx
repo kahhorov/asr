@@ -88,14 +88,24 @@ function App() {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          style={{ width: "200px", padding: "15px", margin: "10px 0" }}
+          style={{
+            width: "200px",
+            padding: "15px",
+            margin: "10px 0",
+            color: "black",
+          }}
         />
         <input
           type="password"
           placeholder="Parol"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          style={{ width: "200px", padding: "15px", margin: "10px 0" }}
+          style={{
+            width: "200px",
+            padding: "15px",
+            margin: "10px 0",
+            color: "black",
+          }}
         />
         <Button
           variant="outlined"
